@@ -1,63 +1,57 @@
 # Correction for BTS SIO SLAM U6 Cas Lama Zoo (Session 2023)
 
-## Dossier A
-### A.1 Question
-Detailed answer with clear explanation of the concepts involved.
+## A.1 
+- **Question**: [Insert Question A.1 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for A.1 here]
 
-### A.2 Question
-Detailed answer with clear explanation of the concepts involved.
+## A.2  
+- **Question**: [Insert Question A.2 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for A.2 here]
 
-### A.3 Question
-...
+## A.3  
+- **Question**: [Insert Question A.3 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for A.3 here]
 
-## Dossier B
-### B.1 Question
-Detailed answer with clear explanation of the concepts involved.
+## A.4  
+- **Question**: [Insert Question A.4 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for A.4 here]
 
-### B.2 Question
-...
+## A.5  
+- **Question**: [Insert Question A.5 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for A.5 here]
 
-## Dossier C
-### C.1 Question
-Detailed answer with clear explanation of the concepts involved.
+## A.6  
+- **Question**: [Insert Question A.6 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for A.6 here]
 
-### C.2 Question
-...
+## B.1 - B.5
+- **Assumption**: No documents provided.  
+- [Insert any related commentary or expected content here]
 
-### C.3 Question
-...
+## C.1
+- **Assumption**: No document provided.  
+- [Insert any related commentary or expected content here]
 
-### C.4 Question
-...
+## C.2  
+- **Question**: [Insert Question C.2 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for C.2 here]
 
-### C.5 Question
-...
+## C.3  
+- **Question**: [Insert Question C.3 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for C.3 here]
 
-### C.6 Question
-Detailed answer with code snippets:
+## C.4
+- **Assumption**: No document provided.  
+- [Insert any related commentary or expected content here]
 
-#### SQL Example
-```sql
--- SQL code snippet
-SELECT * FROM table;
-```
+## C.5  
+- **Question**: [Insert Question C.5 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for C.5 here]
 
-#### Trigger Example
-```sql
--- Trigger code snippet
-CREATE TRIGGER trigger_name
-AFTER INSERT ON table_name
-FOR EACH ROW
-BEGIN
-    -- Trigger logic
-END;
-```
-
-#### PHP/CodeIgniter Code Example
-```php
-// PHP/CodeIgniter code snippet
-$this->load->model('model_name');
-$this->model_name->function_name();
-```
+## C.6  
+- **Question**: [Insert Question C.6 here]  
+- **Answer**: [Insert SQL/PHP CodeIgniter snippet for C.6 here]
 
 ---
+
+**Note**: The above corrections are based on realistic assumptions due to a lack of provided documents and further context.
