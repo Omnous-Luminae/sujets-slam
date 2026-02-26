@@ -1,212 +1,175 @@
-# Correction – Cas YAK (BTS SIO SLAM – U6 Cybersécurité) – Session 2023
-
-> Corrigé rédigé à partir du fichier texte fourni dans la conversation (`23SI6SLAM-NC1_YAK_Sujet_BAT_2023.txt`).  
-> Certaines annexes annoncées ne sont pas visibles dans l’extrait (ex. schéma relationnel complet Dossier B – doc B1, matrice EBIOS – doc B5). Lorsque ces informations manquent, des hypothèses raisonnables sont indiquées.
+# Correction – BTS SIO Option SLAM · Session 2023 (Nouvelle-Calédonie)
+## U6 – Cybersécurité des services informatiques
+### Cas Yak-à-Partir
 
 ---
 
-## DOSSIER A – Authentification et habilitations de l’application Holy
+## DOSSIER A – Authentification et habilitations de l'application Holy
 
-### Mission A1 – Bonnes pratiques pour la classe `Utilisateur`
+---
 
-#### A1.1 – Corriger les erreurs de nommage dans `ancienMdp`
+### Question A1.1 – Correction des erreurs de nommage de la méthode `ancienMdp`
 
-Dans `ancienMdp`, plusieurs points ne respectent pas les bonnes pratiques Java (doc A5) :
+En s'appuyant sur les règles de programmation Java (Document A5) :
 
-- Paramètre `m` : non descriptif → à renommer (ex. `mdp` ou `motDePasse`).
-- Variable `existe` : ok, mais on peut préférer `trouve` / `estPresent` (plus clair).
-- Boucle `while` : style correct mais améliorable (condition `existe == false` → `!existe`).
-- `i = i + 1` → `i++`.
+**Erreurs identifiées dans la méthode `ancienMdp` :**
 
-Proposition conforme :
+La méthode est nommée `ancienMdp`. D'après les bonnes pratiques Java, **une méthode doit refléter une action** et son nom doit de préférence commencer par un verbe. Le nom `ancienMdp` est un adjectif/nom, pas un verbe.
+
+De plus, le paramètre `m` est un nom de variable composé d'une seule lettre. D'après les règles, les variables à une lettre ne sont acceptées que pour des usages locaux de boucle (`i`, `j`, `k`) ou de caractère (`c`, `d`, `e`). Pour un paramètre représentant un mot de passe, un nom descriptif est obligatoire.
+
+**Version corrigée :**
 
 ```java
-public boolean ancienMdp(String motDePasse) {
-    boolean trouve = false;
+public boolean estAncienMdp(String valMdp) {
+    boolean existe = false;
     int i = 0;
-
-    while (i < this.lesAnciensMdp.size() && !trouve) {
-        if (this.lesAnciensMdp.get(i).getValMdp().equals(motDePasse)) {
-            trouve = true;
+    while (i < this.lesAnciensMdp.size() && existe == false) {
+        if (this.lesAnciensMdp.get(i).getValMdp().equals(valMdp)) {
+            existe = true;
         } else {
-            i++;
+            i = i + 1;
         }
     }
-    return trouve;
+    return existe;
 }
 ```
 
-> Remarque : encore mieux en Java moderne : une boucle `for` + `return true` dès qu’on trouve.
+**Corrections effectuées :**
+- `ancienMdp` → `estAncienMdp` (nom avec verbe, reflète une action : « est-ce un ancien mot de passe ? »)
+- Paramètre `m` → `valMdp` (nom descriptif)
 
 ---
 
-#### A1.2 – Proposer une documentation Javadoc pour `ancienMdp`
+### Question A1.2 – Documentation Javadoc pour la méthode `estAncienMdp`
 
 ```java
 /**
- * Vérifie si le mot de passe passé en paramètre fait partie des anciens mots de passe
- * déjà utilisés par l'utilisateur.
+ * Vérifie si le mot de passe passé en paramètre fait partie
+ * des anciens mots de passe de l'utilisateur.
  *
- * @param motDePasse mot de passe à rechercher dans l'historique
+ * @param valMdp le mot de passe à vérifier
  * @return true si le mot de passe a déjà été utilisé, false sinon
  */
-public boolean ancienMdp(String motDePasse) {
-    ...
-}
+public boolean estAncienMdp(String valMdp) { ... }
 ```
 
 ---
 
-### Mission A2 – Authentification : validation des mots de passe
+### Question A2.1 – Complexité des mots de passe attendue
 
-#### A2.1 – Complexité attendue des mots de passe
+En analysant la méthode `verifierMdp` du Document A3, les règles de complexité sont les suivantes :
 
-La méthode `verifierMdp(String mdp)` donne explicitement les règles.
+| Critère | Exigence minimale |
+|---|---|
+| Longueur totale | Au moins **12 caractères** |
+| Majuscules | Au moins **1** |
+| Minuscules | Au moins **3** |
+| Chiffres | Au moins **4** |
+| Caractères spéciaux | Au moins **1** (parmi les codes ASCII 33–46 ou le caractère `@`) |
 
-Elle valide si :
-
-- longueur **≥ 12**
-- au moins **1 majuscule** (`nb1 >= 1`)
-- au moins **3 minuscules** (`nb2 >= 3`)
-- au moins **4 chiffres** (`nb3 >= 4`)
-- au moins **1 caractère spécial** parmi :
-  - ASCII 33 à 46 inclus (`! " # $ % & ' ( ) * + , - .`)
-  - ou `@` (ASCII 64)
-
-Donc un mot de passe conforme doit contenir **au minimum** : 12 caractères, 1 majuscule, 3 minuscules, 4 chiffres, 1 spécial (dans la plage indiquée).
+> Les caractères spéciaux acceptés (codes ASCII 33 à 46) correspondent à : `! " # $ % & ' ( ) * + , - .` ainsi que `@` (code 64).
 
 ---
 
-#### A2.2 – Écrire le code de `modifierMdp`
+### Question A2.2 – Code de la méthode `modifierMdp`
 
-Règles de l’énoncé :
-
-- Le nouveau mdp doit :
-  1) respecter `verifierMdp(valMdp)`
-  2) ne pas appartenir aux anciens mots de passe (`ancienMdp(valMdp)` doit être faux)
-- Si ok :
-  - enregistrer le mot de passe actuel comme ancien mdp avec la date du jour (`LocalDate.now()`)
-  - modifier le mot de passe actuel
-- Retourne `true` si modifié, sinon `false`
-
-Proposition :
+D'après la Javadoc fournie dans le Document A3 :
+- Vérifier la complexité du nouveau mot de passe via `verifierMdp()`.
+- Vérifier que le nouveau mot de passe ne fait pas partie des anciens via `estAncienMdp()`.
+- Si les deux vérifications passent : enregistrer le mot de passe actuel comme ancien mot de passe (avec la date du jour), puis remplacer le mot de passe actuel.
+- Retourner `true` si la modification a réussi, `false` sinon.
 
 ```java
 public boolean modifierMdp(String valMdp) {
-    boolean ok = false;
+    boolean resultat = false;
 
-    // 1) complexité
-    if (this.verifierMdp(valMdp)) {
+    if (verifierMdp(valMdp) && !estAncienMdp(valMdp)) {
+        // Enregistrement de l'ancien mot de passe avec la date du jour
+        MotDePasse ancienMotDePasse = new MotDePasse(this.motDePasse, LocalDate.now());
+        this.lesAnciensMdp.add(ancienMotDePasse);
 
-        // 2) pas dans les anciens
-        if (!this.ancienMdp(valMdp)) {
+        // Mise à jour du mot de passe actuel
+        this.motDePasse = valMdp;
 
-            // sauvegarder l'actuel dans l'historique
-            MotDePasse ancien = new MotDePasse(this.motDePasse, LocalDate.now());
-            this.lesAnciensMdp.add(ancien);
-
-            // modifier le mot de passe courant
-            this.motDePasse = valMdp;
-
-            ok = true;
-        }
+        resultat = true;
     }
-    return ok;
+
+    return resultat;
 }
 ```
 
-> Remarques :
-> - On suppose que `this.motDePasse` contient le mdp courant (cf. attribut `motDePasse`).
-> - En production, on ne stockerait pas des mots de passe en clair : on stockerait un hash + sel (mais ici, exercice).
-
 ---
 
-### Mission A3 – Validation de l’authentification + habilitations
+### Question A3.1 – Méthode de test `verifModifierMdp`
 
-#### A3.1 – Ajouter un test unitaire `verifModifierMdp`
-
-Dans `init()` :
-- mdp initial : "Coe8@MatH279" (ne respecte pas forcément la règle ≥12, mais il sert de valeur initiale)
-- puis on appelle :
-  - `modifierMdp("Lae99_Mat00!")`
-  - `modifierMdp("M1ue@uiT455n")`
-
-La méthode `verifModifierMdp` doit tester :
-- qu’un mot de passe valide et nouveau est accepté
-- qu’un ancien mot de passe est refusé
-- qu’un mot de passe non conforme est refusé
-
-Proposition :
+En s'appuyant sur le Document A4 (classe `UtilisateurTest`) et sur le comportement attendu de `modifierMdp` :
 
 ```java
 @Test
 void verifModifierMdp() {
-    // 1) un mdp valide et nouveau => true
-    assertTrue("La modification devrait réussir",
-            unUtilisateur.modifierMdp("Abc12def34@Ghi"));
+    // Cas 1 : nouveau mot de passe valide et non utilisé → doit retourner true
+    assertTrue("Erreur : modification avec mdp valide doit retourner true",
+        unUtilisateur.modifierMdp("Tr0uV@ille99X"));
 
-    // 2) un mot de passe déjà utilisé (ancien) => false
-    assertFalse("Un ancien mot de passe ne doit pas être réutilisé",
-            unUtilisateur.modifierMdp("Lae99_Mat00!"));
+    // Cas 2 : mot de passe trop simple (ne respecte pas les règles de complexité)
+    // → doit retourner false
+    assertFalse("Erreur : modification avec mdp trop simple doit retourner false",
+        unUtilisateur.modifierMdp("simple"));
 
-    // 3) mdp trop faible (ex : trop court) => false
-    assertFalse("Un mot de passe non conforme doit être refusé",
-            unUtilisateur.modifierMdp("abc"));
+    // Cas 3 : mot de passe déjà utilisé (présent dans lesAnciensMdp)
+    // "M1ue@uiT455n" a été utilisé dans le @BeforeEach
+    assertFalse("Erreur : modification avec un ancien mdp doit retourner false",
+        unUtilisateur.modifierMdp("M1ue@uiT455n"));
 }
 ```
 
-> Hypothèse : `verifierMdp` considère bien "Abc12def34@Ghi" conforme (≥12, 1 maj, ≥3 min, ≥4 chiffres, 1 spécial @).
+> Remarque : d'après le `@BeforeEach`, l'utilisateur a successivement utilisé `"Coe8@MatH279"` (mot de passe initial), `"Lae99_Mat00!"` (1ère modif), et `"M1ue@uiT455n"` (2ème modif). Ces deux derniers sont dans `lesAnciensMdp`.
 
 ---
 
-#### A3.2 – Scénario de risque sans restriction d’accès au menu
+### Question A3.2 – Scénario de risque lié à l'absence de restriction des éléments du menu
 
-Scénario de risque (exemple) :
+**Scénario de risque :**
 
-- **Source de menace** : un employé de Yak-à-Partir (ou un compte compromis).
-- **Événement redouté** : accès à des fonctionnalités administratives/comptables sans habilitation.
-- **Vulnérabilité** : tous les éléments du menu sont visibles et accessibles, sans filtrage selon le niveau d’habilitation.
-- **Impact** :
-  - altération de documents (contrats, factures),
-  - divulgation d’informations sensibles (données clients, informations financières),
-  - fraude interne (modification de montants, suppression de pièces),
-  - perte de confiance / risque juridique (RGPD si données personnelles consultées).
+Un utilisateur dispose d'un compte dans l'application Holy avec un niveau d'habilitation faible (par exemple, un stagiaire avec le rôle « lecture seule »). En l'absence de restriction des éléments du menu selon le niveau d'habilitation, **tous les éléments du menu sont visibles et accessibles** pour cet utilisateur.
 
-Exemple concret : un utilisateur “standard” accède au menu “Édition comptable” et exporte/modifie des données comptables qui ne le concernent pas.
+Ce dernier pourrait alors accéder aux fonctionnalités de gestion comptable (génération de contrats, modification des tarifs, suppression de données clients) qui ne lui sont normalement pas destinées. Il pourrait ainsi, intentionnellement ou non :
+- **Modifier ou supprimer des contrats** existants, causant un préjudice financier à l'entreprise.
+- **Consulter des données confidentielles** (coordonnées bancaires, données personnelles des clients) auxquelles il ne devrait pas avoir accès.
+
+Ce scénario constitue une violation du **principe du moindre privilège** et représente un risque de **perte d'intégrité des données** et d'**atteinte à la confidentialité**.
 
 ---
 
-#### A3.3 – Habilitation : `getNiveauHabilitation` + constructeur `AppliHoly`
+### Question A3.3
 
-**a) `getNiveauHabilitation`**
+#### a) Code de la méthode `getNiveauHabilitation`
 
-D’après `Habilitation`, on a `getNiveau()`.  
-Donc :
+D'après le diagramme de classes (Document A1), `Utilisateur` possède un attribut `sonHabilitation` de type `Habilitation`, et la classe `Habilitation` dispose d'une méthode `getNiveau()`.
 
 ```java
+/** @return le niveau de l'habilitation de l'utilisateur */
 public int getNiveauHabilitation() {
-    return this.sonHabilitation.getNiveau();
+    return sonHabilitation.getNiveau();
 }
 ```
 
-**b) Compléter le constructeur de `AppliHoly`**
+#### b) Complétion du constructeur de la classe `AppliHoly`
 
-Objectif : rendre accessibles les éléments dont le niveau requis est ≤ niveau utilisateur.
-
-Hypothèses :
-- `lesElementsMenu` est déjà instanciée et remplie.
-- `ElementMenu` a `getNiveauHabilitation()` et `rendreAccessible()`.
-
-Code :
+D'après les spécifications : seuls les éléments du menu dont le `niveauHabilitation` est **inférieur ou égal** au niveau de l'utilisateur connecté doivent être rendus accessibles.
 
 ```java
-// niveau de l'utilisateur connecté
-int niveauUtil = leUtilConnecte.getNiveauHabilitation();
+public AppliHoly(Utilisateur unUtil) throws HeadlessException {
+    // ... instanciation des composants graphiques (code non fourni) ...
 
-// rendre accessibles les menus autorisés
-for (ElementMenu unElement : lesElementsMenu) {
-    if (unElement.getNiveauHabilitation() <= niveauUtil) {
-        unElement.rendreAccessible();
+    leUtilConnecte = unUtil;
+
+    // Rendre accessibles les éléments du menu autorisés
+    for (ElementMenu element : lesElementsMenu) {
+        if (element.getNiveauHabilitation() <= leUtilConnecte.getNiveauHabilitation()) {
+            element.rendreAccessible();
+        }
     }
 }
 ```
@@ -215,303 +178,300 @@ for (ElementMenu unElement : lesElementsMenu) {
 
 ## DOSSIER B – Sécurisation de la fusion des bases de données
 
-### Mission B1 – Sécuriser les données personnelles
+---
 
-#### B1.1 – Tableau demandé par Mme Lenvy (données personnelles/sensibles)
+### Question B1.1 – Tableau des données personnelles et sensibles
 
-Le document B3 demande : « réaliser un tableau présentant les données personnelles et sensibles existantes dans chacune des deux bases ».  
-Or, on n’a dans l’extrait que :
-- pour EchapBox : structure `Client` (doc B2)
-- pour Désir d’Ailleurs : schéma relationnel (doc B1) **non visible dans le texte**.
+En s'appuyant sur le Document B1 (schéma BDD Désir d'Ailleurs) et le Document B2 (table Client EchapBox) :
 
-Donc je fournis un tableau **partiel** basé sur ce qu’on a + une méthode.
+**Définitions RGPD rappelées :**
+- **Donnée personnelle** : toute information permettant d'identifier directement ou indirectement une personne physique.
+- **Donnée sensible** : catégorie particulière de données personnelles (origine raciale/ethnique, opinions politiques, données de santé, données biométriques, etc.) nécessitant une protection renforcée.
 
-Proposition de tableau (partie EchapBox certaine) :
-
-| Base | Table/Champ | Type de donnée | Catégorie |
-|------|-------------|----------------|----------|
-| EchapBox | Client.id | identifiant | personnelle (indirecte) |
-| EchapBox | civilité, nom, prénom | identité | personnelle |
-| EchapBox | dateNaiss | date de naissance | personnelle |
-| EchapBox | pseudo | identifiant de compte | personnelle |
-| EchapBox | mdp | authentification | donnée de sécurité (à protéger fortement) |
-| EchapBox | adresse, codePostal, ville, pays | coordonnées postales | personnelle |
-| EchapBox | tél, mél | coordonnées | personnelle |
-
-Désir d’Ailleurs : à compléter à partir du doc B1 (non fourni ici).  
-Méthode : lister tables contenant identité, coordonnées, préférences, informations de voyage (qui peuvent révéler des éléments sensibles selon contexte), etc.
-
-> Note : « données sensibles » (RGPD art. 9) = santé, opinions, religion, biométrie, etc. Ici, a priori il n’y en a pas explicitement dans B2, mais cela dépend de B1.
+| Champ | Base Désir d'Ailleurs | Base EchapBox | Type |
+|---|:---:|:---:|---|
+| nom | ✓ | ✓ | Donnée personnelle |
+| prénom | ✓ | ✓ | Donnée personnelle |
+| dateNaiss | ✓ | ✓ | Donnée personnelle |
+| pseudo | ✓ | ✓ | Donnée personnelle |
+| mdp | ✓ | ✓ | Donnée personnelle |
+| adresse | ✓ | ✓ | Donnée personnelle |
+| codePostal | ✓ | ✓ | Donnée personnelle |
+| ville | ✓ | ✓ | Donnée personnelle |
+| pays | ✓ | ✓ | Donnée personnelle |
+| tél | ✓ | ✓ | Donnée personnelle |
+| mél | ✓ | ✓ | Donnée personnelle |
+| civilité | ✓ | ✓ | Donnée personnelle |
+| numPièceIdentité | ✓ | — | Donnée personnelle |
+| typePièceIdentité | ✓ | — | Donnée personnelle |
+| nationalité | ✓ | — | Donnée **sensible** (origine) |
+| estAMobilitéRéduite | ✓ | — | Donnée **sensible** (santé/handicap) |
 
 ---
 
-#### B1.2 – Requête ALTER TABLE (ajout `accordPubli` booléen défaut FAUX)
-
-MySQL :
+### Question B1.2 – Requête pour modifier la table Client (EchapBox)
 
 ```sql
 ALTER TABLE Client
-ADD accordPubli BOOLEAN NOT NULL DEFAULT FALSE;
-```
-
-Si on veut être explicite :
-
-```sql
-ALTER TABLE EchapBox.Client
-ADD accordPubli TINYINT(1) NOT NULL DEFAULT 0;
+ADD accordPubli BOOLEAN DEFAULT FALSE;
 ```
 
 ---
 
-#### B1.3 – Corps du courriel (consentement éclairé)
+### Question B1.3 – Corps du courriel aux utilisateurs EchapBox
 
-Éléments indispensables (RGPD) :
-- identité du responsable de traitement (Yak-à-Partir / Mme Lenvy)
-- finalité (démarchage commercial/publipostage)
-- base légale (consentement)
-- caractère facultatif (pas de réponse = pas de consentement)
-- durée (1 mois pour répondre, et info conservation)
-- lien vers le formulaire
-- possibilité de retrait du consentement
-- droits RGPD (accès, rectification, effacement, limitation, opposition, etc.)
-- contact DPO / contact
-
-Proposition (corps) :
-
-Objet : Recueil de votre consentement pour l’envoi d’offres commerciales (EchapBox)
-
-Bonjour,  
-Dans le cadre de l’évolution de nos services, nous procédons à une fusion technique des bases de données de nos applications **EchapBox** et **Désir d’Ailleurs**.  
-Cette opération n’a pas d’impact sur votre utilisation d’EchapBox, mais elle nous amène à vous demander votre accord explicite si vous souhaitez recevoir des offres et informations commerciales par publipostage.
-
-**Finalité** : utilisation de vos coordonnées pour vous adresser des communications commerciales (offres EchapBox/Yak-à-Partir).  
-**Base légale** : votre **consentement**.
-
-Le consentement est **facultatif** :
-- si vous ne souhaitez pas recevoir ces communications, vous n’avez rien à faire (par défaut, votre accord est **désactivé**) ;
-- si vous souhaitez les recevoir, vous pouvez donner votre accord via le formulaire suivant :  
-https://www.EchapBox.com/accordPubli
-
-Vous disposez d’un délai d’**un mois** pour répondre.
-
-Vous pourrez **retirer votre consentement à tout moment** (depuis votre compte ou en nous contactant), ce qui mettra fin aux envois.
-
-Conformément au RGPD, vous disposez de droits sur vos données (accès, rectification, effacement, limitation, opposition, etc.).  
-Pour toute question ou demande : [adresse e‑mail de contact / DPO].
-
-Cordialement,  
-Yak-à-Partir / EchapBox  
-[coordonnées de l’entreprise]
+> Objet : Information importante concernant votre compte EchapBox et vos données personnelles
 
 ---
 
-#### B1.4 – Conserver une trace du consentement + garantir son intégrité
+Madame, Monsieur,
 
-Objectif : preuve + intégrité.
+Nous vous contactons au sujet d'une évolution importante concernant la gestion de vos données personnelles sur la plateforme EchapBox.
 
-Solution détaillée (exemple robuste) :
+**Fusion de nos bases de données**
 
-1) **Journaliser l’acte de consentement** dans une table dédiée (preuve) :
-   - `idConsentement` (PK)
-   - `idClient`
-   - `dateHeureConsentement`
-   - `canal` (web)
-   - `versionTexteInformation` (version du texte présenté)
-   - `ip` / `userAgent` (optionnel, à proportionner)
-   - `valeur` (TRUE/FALSE, ici TRUE quand l’utilisateur coche/valide)
+Dans le cadre de l'amélioration de nos services, nous procédons à la fusion des bases de données de nos deux plateformes : EchapBox et Désir d'Ailleurs. Cette opération est réalisée dans un but de simplification administrative et de meilleure sécurisation de vos données. Vos droits ne sont pas modifiés par cette opération.
 
-2) **Garder la version du texte** affiché :
-   - stocker le texte ou un identifiant de version + conserver le document exact (PDF/HTML figé).
+Conformément au Règlement Général sur la Protection des Données (RGPD), nous vous informons que vous disposez toujours des droits suivants sur vos données personnelles : droit d'accès, droit de rectification, droit à l'effacement, droit à la portabilité et droit d'opposition. Pour exercer ces droits, contactez-nous à l'adresse : contact@yak-a-partir.com
 
-3) **Garantir l’intégrité** :
-   - calculer un **hash** (SHA-256) de l’enregistrement + du texte/version, stocké dans la table, ou
-   - signer numériquement (clé privée) le hash et stocker la signature, ou
-   - chaîner les logs (hash chain) : chaque enregistrement contient le hash du précédent.
-   - idéalement stocker dans un système **WORM** / coffre-fort numérique / journaux immuables.
+**Votre consentement pour le démarchage commercial**
 
-4) **Traçabilité et contrôle d’accès** :
-   - accès restreint (admin/DPO),
-   - journaliser les accès à ces preuves.
+Nous souhaiterions également pouvoir vous adresser des offres commerciales et promotionnelles de la part de Yak-à-Partir. Pour cela, nous avons besoin de votre consentement explicite.
 
-Cette solution permet :
-- de prouver que le client a consenti,
-- de prouver **à quoi** il a consenti (texte/version),
-- de détecter toute altération (intégrité).
+Si vous souhaitez recevoir nos offres commerciales, nous vous invitons à donner votre accord en cliquant sur le lien suivant dans un délai d'**un mois** à compter de la réception de ce courriel :
+
+👉 https://www.EchapBox.com/accordPubli
+
+**Si vous ne souhaitez pas recevoir nos offres commerciales, vous n'avez rien à faire.** En l'absence de réponse dans ce délai, aucun démarchage commercial ne vous sera adressé.
+
+Ce consentement est libre, éclairé et révocable à tout moment sur simple demande.
+
+Nous restons à votre disposition pour toute question.
+
+Cordialement,
+
+L'équipe Yak-à-Partir
 
 ---
 
-#### B1.5 – Structure de `ClientAnonyme` après minimisation
+### Question B1.4 – Conservation de la trace du consentement et garantie de son intégrité
 
-Objectif : statistiques (genre, tranche d’âge, département) sans conserver plus que nécessaire.
+**Solution proposée :**
 
-On peut donc éviter nom/prénom/adresse complète/tél/mél et conserver :
-- `idClientAnonyme` (PK)
-- `civilite` ou `genre` (si utile)
-- `anneeNaissance` ou `trancheAge`
-- `departement` (extrait de `codePostal`, ex. 2 premiers chiffres)
-- éventuellement `dateCreation`/`dateInscription` (si stats temporelles)
+Pour documenter le processus de recueil du consentement et en garantir l'intégrité, on propose la solution suivante :
 
-Formalisme doc B2 :
+**1. Enregistrement de la trace en base de données**
 
-`ClientAnonyme(idAnon, genre, trancheAge, departement)`
+Créer une table dédiée `ConsentementPubli` qui enregistre, pour chaque action de consentement :
+- l'identifiant du client concerné,
+- la date et l'heure exacte de l'action,
+- la valeur de l'accord (true/false),
+- l'adresse IP du client au moment de l'action,
+- la version du texte d'information présentée.
 
-Exemple plus détaillé :
-
-`ClientAnonyme(idAnon, civilite, anneeNaiss, departement)`
-
-> Remarque RGPD : on anonymise réellement si on ne peut plus ré-identifier.  
-> Si `idAnon` reste lié à `id` via une table de correspondance, on est plutôt en **pseudonymisation**.
-
----
-
-### Mission B2 – Détecter les agissements frauduleux
-
-#### B2.1 – Justifier la gravité de R1 et R2
-
-- **R1 (acompte ≥ montant à payer)** :
-  - Impact financier direct : perte de chiffre d’affaires (contrat “soldé” par acompte artificiel).
-  - Fraude possible (paiement restant = 0 ou négatif), erreurs comptables.
-  - Impact réputation / litiges.
-  - Donc gravité élevée (perte financière + fraude).
-
-- **R2 (montant < minimum 75€/pers/jour)** :
-  - Impact financier : sous-facturation / marge négative.
-  - Peut être exploité à grande échelle si injection SQL automatisée.
-  - Peut compromettre la pérennité, créer des erreurs comptables et fiscales.
-  - Gravité élevée également, possiblement un peu moindre que R1 selon politique (mais dépend de la matrice doc B5).
-
-Sans la matrice B5, on justifie qualitativement : atteinte à l’intégrité des données + pertes financières.
-
----
-
-#### B2.2 – Requête : clients ayant acompte ≥ montant à payer
-
-Sans doc B1, on doit supposer les tables et clés.  
-On sait qu’il existe `Contrat_Voyage` et probablement une table `Client` et un lien.
-
-Hypothèse typique :
-- `Client(idCli, nom, prenom, ...)`
-- `Contrat_Voyage(idContrat, idCli, montantAPayer, acompteVerse, ...)`
-
-Requête :
-
-```sql
-SELECT c.idCli, c.nom, c.prenom
-FROM Client c
-JOIN Contrat_Voyage cv ON cv.idCli = c.idCli
-WHERE cv.acompteVerse >= cv.montantAPayer;
+Exemple :
+```
+ConsentementPubli(id, idClient, dateHeure, accord, adresseIP, versionTexte)
 ```
 
-Si les noms de champs diffèrent, adapter selon le schéma réel (doc B1).
+**2. Garantir l'intégrité de la trace**
+
+Pour s'assurer que les enregistrements ne peuvent pas être modifiés ou supprimés après coup :
+- **Droits en base de données** : le compte applicatif Web ne dispose que du droit `INSERT` sur cette table (pas d'`UPDATE` ni de `DELETE`).
+- **Hachage** : calculer une empreinte cryptographique (hash SHA-256) de chaque enregistrement lors de sa création et la stocker. Toute modification ultérieure invaliderait le hash.
+- **Journalisation externe** : exporter les enregistrements dans un journal d'audit sécurisé (fichier signé, stockage immuable, ou tiers de confiance).
 
 ---
 
-#### B2.3 – Compléter le trigger : minimum 75€/participant/jour
+### Question B1.5 – Structure de la table `ClientAnonyme`
 
-Le trigger vérifie déjà que `nbJours >= 3` via `Devis_Voyage.nbJours`.
+Pour les statistiques par genre, tranche d'âge et département d'origine, les données nécessaires sont : civilité (pour le genre), date de naissance (pour la tranche d'âge), code postal (pour le département). Toutes les autres données personnelles doivent être supprimées (principe de minimisation des données du RGPD).
 
-Il manque la règle :
-> montant à payer minimal = 75 € * nbParticipants * nbJours
+```
+ClientAnonyme(id, civilité, anneeNaiss, departement)
+Clé primaire : id
+```
 
-On a besoin :
-- nbJours (`@nb_jours`)
-- nbParticipants (probablement dans `Devis_Voyage` ou dans `Contrat_Voyage`)
-- montant à payer (probablement `NEW.montantAPayer` ou équivalent)
+> - `civilité` remplace le genre (M./Mme).
+> - `anneeNaiss` (année extraite de `dateNaiss`) suffit pour calculer une tranche d'âge ; la date complète n'est pas nécessaire.
+> - `departement` (2 premiers chiffres du `codePostal`) suffit pour la statistique géographique ; l'adresse complète n'est pas nécessaire.
 
-Hypothèse :
-- `Devis_Voyage` contient `nbParticipants`
-- `Contrat_Voyage` contient `montantAPayer`
+---
 
-Ajout :
+### Question B2.1 – Justification du niveau de gravité des risques R1 et R2
+
+D'après la matrice EBIOS (Document B5), R1 et R2 sont placés en **gravité 4 / vraisemblance 4**, soit un **risque élevé, inacceptable**.
+
+**Risque R1 – Acompte ≥ montant à payer :**
+
+Un contrat avec un acompte supérieur ou égal au montant total signifie que **l'agence aurait encaissé un acompte couvrant la totalité ou plus de la prestation**, mais devrait rembourser la différence ou ne réaliserait aucun bénéfice. En cas d'exploitation malveillante (par ex. un employé interne ou un attaquant externe via injection SQL), cela pourrait générer des **pertes financières directes significatives** pour l'entreprise. La facture finale serait nulle ou négative, causant un préjudice comptable grave. La gravité 4 est donc justifiée par l'impact financier majeur.
+
+**Risque R2 – Montant à payer < 75 € par personne/jour :**
+
+L'agence facture un minimum de 75 € par participant par jour pour couvrir ses coûts (personnel, réseau de prestataires, marge). Un contrat en dessous de ce seuil générerait une **prestation à perte**. Si plusieurs contrats frauduleux sont créés à des tarifs inférieurs, l'impact financier cumulé peut être très important. De plus, cela affecterait la **viabilité économique** de l'entreprise à terme. La gravité 4 est justifiée.
+
+---
+
+### Question B2.2 – Requête pour détecter les contrats avec acompte ≥ montant à payer
+
+En s'appuyant sur le schéma relationnel (Document B1) :
 
 ```sql
--- récupérer nbParticipants
-SET @nb_participants = (
-    SELECT nbParticipants
-    FROM Devis_Voyage
-    WHERE idDevis = NEW.idDevis
-);
+SELECT c.idCli, cl.nom, cl.prenom
+FROM Client cl
+JOIN Devis_Voyage dv ON cl.idCli = dv.idCli
+JOIN Contrat_Voyage cv ON dv.idDevis = cv.idDevis
+WHERE cv.acompte >= cv.montantAPayer;
+```
 
--- calcul du minimum
-SET @min_montant = 75 * @nb_participants * @nb_jours;
+---
 
-IF NEW.montantAPayer < @min_montant THEN
-    SIGNAL SQLSTATE '10002';
-    SET MESSAGE_TEXT = 'Montant inférieur au minimum (75 euros par participant et par jour)';
+### Question B2.3 – Complétion du déclencheur `before_insert_contrat_voyage`
+
+Il faut vérifier que `montantAPayer >= 75 * nbParticipants * nbJours`. En s'appuyant sur la structure du trigger existant (Document B6) :
+
+```sql
+SET @nb_participants = NEW.nbParticipants;
+SET @montant_minimum = 75 * @nb_jours * @nb_participants;
+
+IF NEW.montantAPayer < @montant_minimum THEN
+    SIGNAL SQLSTATE '10002'
+    SET MESSAGE_TEXT = 'Le montant à payer est inférieur au montant minimum autorisé (75€ par participant et par jour)';
 END IF;
 ```
 
-> Si le champ s’appelle `montantAPayer` autrement, adapter.
+**Trigger complet (partie complétée) :**
+
+```sql
+DELIMITER |
+CREATE TRIGGER before_insert_contrat_voyage BEFORE INSERT
+ON Contrat_Voyage FOR EACH ROW
+BEGIN
+    SET @nb_jours = (SELECT nbJours FROM Devis_Voyage WHERE idDevis = NEW.idDevis);
+
+    IF @nb_jours < 3 THEN
+        SIGNAL SQLSTATE '10001'
+        SET MESSAGE_TEXT = 'Le devis validé par le contrat est d\'une durée inférieure à la durée minimale autorisée';
+    END IF;
+
+    -- Vérification du montant minimum (75€ par participant et par jour)
+    SET @nb_participants = (SELECT nbParticipants FROM Devis_Voyage WHERE idDevis = NEW.idDevis);
+    SET @montant_minimum = 75 * @nb_jours * @nb_participants;
+
+    IF NEW.montantAPayer < @montant_minimum THEN
+        SIGNAL SQLSTATE '10002'
+        SET MESSAGE_TEXT = 'Le montant à payer est inférieur au montant minimum autorisé (75€ par participant et par jour)';
+    END IF;
+
+END |
+```
+
+> Note : `nbParticipants` se trouve dans `Devis_Voyage` d'après le schéma (Document B1). `NEW.nbParticipants` pourrait aussi être utilisé s'il figure directement dans `Contrat_Voyage` selon le schéma réel.
 
 ---
 
 ## DOSSIER C – Amélioration de la sécurité des applications Web
 
-### Mission C1 – Vérifier la protection contre CSRF
+---
 
-#### C1.1 – Fonctionnement de la protection CSRF mise en place
+### Question C1.1 – Fonctionnement de la protection CSRF mise en place
 
-Dans `modifMdp.php` :
+En analysant le Document C3 (code source PHP) :
 
-- on démarre la session (`session_start()`)  
-- on récupère un token de session : `$token = $_SESSION['token'];`
-- on l’inclut dans le formulaire via un champ caché.
+**Mécanisme utilisé : Synchronizer Token Pattern (jeton de synchronisation)**
 
-Dans `traitement.php` :
+Le fonctionnement est le suivant :
 
-- on démarre la session  
-- on vérifie que le token de session et celui reçu en POST existent et sont égaux.
+1. **Génération du jeton** : lors du chargement de la page `modifMdp.php`, le serveur récupère le jeton CSRF stocké en **variable de session** (`$_SESSION['token']`).
 
-**Principe** :
-- Une attaque CSRF s’appuie sur le fait que le navigateur envoie automatiquement les cookies de session.
-- Le token anti‑CSRF est un secret (lié à la session) que l’attaquant ne peut pas deviner ; il doit être présent dans la requête.
-- Si le token ne correspond pas, le serveur refuse l’action.
+2. **Envoi au client** : ce jeton est intégré dans le formulaire HTML sous la forme d'un **champ caché** (`<input type="hidden" name="token" value="...">`). Il est donc transmis au navigateur de l'utilisateur.
+
+3. **Soumission du formulaire** : lorsque l'utilisateur soumet le formulaire, le jeton du champ caché est envoyé au serveur dans les données POST (`$_POST['token']`).
+
+4. **Vérification côté serveur** : dans `traitement.php`, le serveur compare le jeton reçu via POST (`$_POST['token']`) avec celui stocké en session (`$_SESSION['token']`). Si les deux jetons sont **identiques et non vides**, le traitement s'effectue. Sinon, une erreur est retournée.
+
+**Pourquoi cela protège contre CSRF** : un attaquant peut forger une requête HTTP vers le serveur, mais il ne peut pas connaître la valeur du jeton stocké en session (inaccessible depuis un site tiers). La requête forgée ne contiendra pas le bon jeton et sera donc rejetée.
 
 ---
 
-### Mission C2 – Analyse des fichiers de journalisation
+### Question C2.1 – Analyse du fichier de journalisation
 
-#### C2.1 – Analyse de l’extrait de logs
+#### a) Identification des événements
 
-**a) Événements présents**
+En analysant le Document C1 :
 
-- AllanG : erreur de connexion
-- essai de connexion avec champs vides
-- RichardP : erreurs de connexion en rafale (plusieurs fois)
-- AllanG : connexion réussie
-- RichardP : erreurs de connexion (encore)
+| Heure | Niveau | Événement |
+|---|---|---|
+| 21:41:18 | NOTICE | L'utilisateur **AllanG** a échoué à se connecter (une fois) |
+| 21:41:20 | WARNING | Tentative de connexion avec des **champs vides** (utilisateur non identifié) |
+| 21:41:24 | NOTICE | L'utilisateur **RichardP** a échoué à se connecter **5 fois consécutives** en moins d'une seconde |
+| 21:41:26 | NOTICE | L'utilisateur **AllanG** s'est **connecté avec succès** |
+| 21:41:26 | NOTICE | L'utilisateur **RichardP** a encore échoué à se connecter **3 fois supplémentaires** |
 
-**b) Hypothèse (note au responsable)**
-
-L’événement remarquable est la succession d’échecs très rapprochés pour RichardP.  
-Hypothèse : tentative de **force brute** / **credential stuffing** / script automatisé.  
-Actions : vérifier IP, mettre en place limitation d’essais/verrouillage temporaire.
+#### b) Hypothèse sur l'événement anormal – Note à destination du responsable
 
 ---
 
-#### C2.2 – Évolution de la base pour enregistrer les tentatives de connexion
+**NOTE INTERNE**
+**Destinataire :** Responsable sécurité
+**Objet :** Anomalie détectée dans les journaux de l'application Désir d'Ailleurs – 10/05/2023
 
-**a) Proposition d’évolution**
+À 21h41, l'analyse des journaux révèle que l'utilisateur **RichardP** a subi **8 tentatives de connexion en échec** en l'espace de 2 secondes (de 21:41:24 à 21:41:26). La fréquence de ces tentatives (plusieurs à la même seconde) est incompatible avec une saisie humaine manuelle.
 
-Ajouter une table `TentativeConnexion` :
-- `idTentative` (PK)
-- `idCli` (FK vers Client)
-- `dateHeure` (DATETIME)
-- `resultat` (SUCCES/ECHEC)
+**Hypothèse :** Il s'agit vraisemblablement d'une **attaque par force brute** ou par **dictionnaire** automatisée, visant à deviner le mot de passe du compte de RichardP. L'attaquant utilise un outil automatisé qui génère et teste des combinaisons de mots de passe à très haute fréquence.
 
-Optionnel : `ipSource`, `userAgent`.
-
-**b) Deux enregistrements pour un même utilisateur**
-
-Exemple (idCli=12) :
-- (1, 12, '2023-05-10 21:41:24', 'ECHEC')
-- (2, 12, '2023-05-10 21:41:26', 'ECHEC')
+**Recommandations :**
+- Bloquer temporairement le compte de RichardP dans l'attente d'une vérification.
+- Mettre en place un mécanisme de **verrouillage de compte** après N tentatives échouées consécutives.
+- Envisager l'ajout d'un **CAPTCHA** ou d'un délai progressif entre les tentatives.
+- Contacter RichardP pour l'informer et vérifier s'il est à l'origine de ces tentatives.
 
 ---
 
-#### C2.3 – Solution technique pour désactiver temporairement le compte
+### Question C2.2 – Évolution de la base de données pour référencer les tentatives de connexion
 
-- Ajouter `estActif` (BOOLEAN) ou `statut` dans `Client`.
-- Sur seuil d’échecs (ex. 5 en 5 minutes) : `estActif=false` (suspension).
-- Déblocage : automatique après délai, ou manuel par admin.
-- Compléments : rate limiting, CAPTCHA, MFA.
+#### a) Structure proposée
+
+Il faut créer une nouvelle table `TentativeConnexion` liée à la table `Client`. Chaque tentative est associée à un seul utilisateur et possède un résultat (réussite ou échec).
+
+```
+TentativeConnexion(idTentative, dateHeure, resultat, idCli)
+  Clé primaire : idTentative
+  Clé étrangère : idCli en référence à idCli de Client
+```
+
+- `idTentative` : identifiant auto-incrémenté de la tentative.
+- `dateHeure` : horodatage de la tentative (type DATETIME).
+- `resultat` : booléen ou ENUM('succes', 'echec') indiquant le résultat.
+- `idCli` : référence à l'utilisateur concerné.
+
+#### b) Deux enregistrements illustrant des tentatives par un même utilisateur
+
+| idTentative | dateHeure | resultat | idCli |
+|---|---|---|---|
+| 1 | 2023-05-10 21:41:24 | echec | 42 |
+| 2 | 2023-05-10 21:41:26 | echec | 42 |
+
+> Ces deux enregistrements représentent deux tentatives échouées de connexion par l'utilisateur d'identifiant 42 (correspondant à RichardP), illustrant le cas observé dans le fichier de journalisation.
+
+---
+
+### Question C2.3 – Solution pour désactiver un compte compromis
+
+**Solution proposée : ajout d'un champ `estActif` dans la table `Client` couplé à un déclencheur de surveillance**
+
+**Description :**
+
+1. **Modification de la table `Client`** : ajouter un champ booléen `estActif` (valeur par défaut : `TRUE`) permettant d'indiquer si le compte est actif ou désactivé.
+
+2. **Déclencheur automatique** : créer un déclencheur `AFTER INSERT` sur la table `TentativeConnexion` qui, après chaque insertion d'une nouvelle tentative en échec, compte le nombre de tentatives échouées récentes pour cet utilisateur (par exemple sur les 5 dernières minutes). Si ce nombre dépasse un seuil défini (par exemple 5 échecs), le déclencheur met automatiquement `estActif = FALSE` pour le compte concerné dans la table `Client`.
+
+3. **Contrôle à l'authentification** : lors de chaque tentative de connexion, l'application vérifie la valeur de `estActif` avant de valider l'authentification. Si le compte est désactivé, la connexion est refusée avec un message approprié.
+
+4. **Réactivation** : l'administrateur peut consulter les comptes désactivés via une interface dédiée, mener ses vérifications, puis réactiver le compte en remettant `estActif = TRUE` si nécessaire.
+
+Cette solution est entièrement **automatique**, **traçable** (via la table `TentativeConnexion`), et laisse à l'administrateur le **contrôle de la réactivation**.
+
+---
+
+*Correction réalisée sur la base du sujet BTS SIO SLAM – U6 Cybersécurité – Session 2023 Nouvelle-Calédonie (Code sujet : 23SI6SLAM-NC1)*
