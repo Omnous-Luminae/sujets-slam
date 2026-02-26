@@ -1,374 +1,543 @@
-# Correction rédigée – Cas Easy2Drive (BTS SIO SLAM U6 – Session 2022)
-
-> Correction rédigée à partir de la copie du sujet fournie dans le chat. Certaines réponses (notamment celles liées à des documents graphiques non fournis : maquettes, schémas BD_RGPD_LOGS, diagrammes) sont proposées sous forme de solution cohérente et argumentée, conformément aux attendus U6.
-
----
-
-## Dossier A – Sécurisation de l’application e-learning
-
-### Mission A1 – Évaluation des risques à partir des user stories
-
-#### A.1.1
-
-**a) Disponibilité : différence entre les récits 1 et 2**
-
-- **Récit 1 (famille consulte le site sans compte)** : l’indisponibilité est certes gênante (perte d’opportunités commerciales, image), mais elle ne bloque pas un processus métier critique et n’empêche pas un utilisateur authentifié de poursuivre une formation. Le besoin de disponibilité est donc **modéré**.
-- **Récit 2 (élève modifie son mot de passe)** : l’action touche directement l’**accès au compte**. Si la fonction est indisponible au moment où l’élève doit sécuriser/recouvrer l’accès, cela peut mener à une **perte d’accès**, à un maintien d’un mot de passe faible/compromis, et à une augmentation du risque de compromission. La disponibilité a donc un niveau **important**.
-
-**b) Intégrité et confidentialité du récit 2**
-
-- **Intégrité importante** : la modification de mot de passe doit être exacte et non altérée (mot de passe réellement remplacé, respect des règles, absence de corruption). Une erreur d’intégrité peut provoquer un verrouillage, une usurpation ou une perte de contrôle du compte.
-- **Confidentialité importante** : la donnée manipulée (secret d’authentification, ou son hash, ainsi que les indicateurs de politique) est hautement sensible. Toute divulgation (ex : mot de passe en clair, fuite de hash, fuite de règles internes favorisant une attaque) augmente fortement le risque de compromission.
-
-**c) Preuve : différence entre les récits 1 et 3**
-
-- **Récit 1** : consultation publique d’information ; la traçabilité opposable est généralement **sans objet** (pas de litige fort lié à un acte authentifié).
-- **Récit 3 (élève poste un commentaire/avis)** : publication potentiellement litigieuse (diffamation, injure, contestation de modération, contestation d’attribution). Il est nécessaire de conserver des **preuves** : auteur, date/heure, contexte, et actions de modération, donc niveau **important**.
+# Correction – BTS SIO Option SLAM · Session 2022
+## U6 – Cybersécurité des services informatiques
+### Cas Easy2Drive
 
 ---
 
-### Mission A2 – Prise en compte du RGPD
-
-#### A.2.1 – Non-conformité cookies (septembre 2020)
-
-Le bandeau actuel se limite à : « Nous utilisons des cookies pour nous assurer du bon fonctionnement… ».
-
-Or, selon la délibération CNIL (17/09/2020) :
-- l’utilisateur doit être **clairement informé des finalités** des cookies ;
-- le **consentement implicite** n’est plus acceptable ;
-- l’interface doit proposer un **choix clair** : **Accepter / Refuser / Gérer (paramétrer)**.
-
-Ainsi, le bandeau ne permet pas un consentement libre, spécifique, éclairé et univoque, ni un refus aussi simple que l’acceptation.
-
-#### A.2.2 – Données personnelles collectées (récit utilisateur 1)
-
-D’après la politique (doc A3), lors d’une consultation à des fins d’information, sont collectées :
-- **adresse IP** : donnée personnelle (identifie indirectement une personne / terminal) ;
-- **type d’appareil**, **version navigateur**, **résolution écran**, **OS**, **langue** : données pouvant participer à une **empreinte** du terminal, donc potentiellement personnelles ;
-- **teneur des requêtes** : peut révéler des informations sur l’utilisateur (centres d’intérêt) ;
-
-=> Ce sont des **données à caractère personnel** car elles se rapportent à une personne identifiable directement ou indirectement (RGPD), notamment via l’IP et le profilage/empreinte.
+## DOSSIER A – Sécurisation de l'application de formation en ligne (e-learning)
 
 ---
 
-### Mission A3 – Sécurité du mot de passe
+### Question A.1.1 – Analyse des niveaux de sécurité des récits utilisateurs
 
-#### A.3.1
+#### a) Différence de disponibilité entre récits 1 et 2
 
-**a) Pourquoi la communication et l’utilisation du mot de passe initial sont insuffisantes**
+- **Récit 1** (consultation publique sans compte) : disponibilité **importante (\*\*)** car la famille doit pouvoir accéder au site à tout moment pour s'informer. Il s'agit d'une vitrine commerciale dont l'indisponibilité nuirait à l'image de l'entreprise et ferait perdre des clients potentiels.
+- **Récit 2** (modification du mot de passe) : disponibilité **modérée (\*)** car si la fonctionnalité est temporairement indisponible, l'élève peut simplement attendre avant de changer son mot de passe. Cela ne bloque pas immédiatement son accès à la formation.
 
-- Le mot de passe initial est **envoyé en clair par courriel** : le mail peut être intercepté/consulté (boîte mail compromise, transfert, accès familial, etc.).
-- L’élève peut **conserver** ce mot de passe « tout au long de la formation » : un secret initial, souvent généré et transmis par un canal faible, ne doit pas rester valide durablement.
-- Risque accru de **réutilisation**, de **devinabilité**, et d’attaque (phishing, compromission mail).
+#### b) Niveaux d'intégrité et confidentialité du récit 2
 
-**b) Meilleure solution pour communiquer le mot de passe initial**
+- **Intégrité importante (\*\*)** : le mot de passe est un élément critique de sécurité. S'il était corrompu ou modifié à l'insu de l'élève, cela bloquerait son accès ou permettrait une usurpation d'identité. Il est essentiel que la modification soit exacte et effective.
+- **Confidentialité importante (\*\*)** : le mot de passe est une donnée secrète par nature. Sa divulgation permettrait à un tiers de se connecter au compte de l'élève et d'accéder à ses données personnelles et à sa formation.
 
-Ne pas transmettre de mot de passe permanent.
+#### c) Différence de niveau de preuve entre récits 1 et 3
 
-Solution recommandée :
-- envoyer un **lien d’activation / de création de mot de passe** à usage unique, avec **jeton** aléatoire, **expiration courte** (ex : 24h), et invalidation après usage ;
-- forcer la création d’un mot de passe conforme CNIL lors de la première connexion.
+- **Récit 1** (consultation publique) : preuve **sans objet (-)** car aucun compte n'est créé, aucune donnée personnelle n'est déposée, et aucune action engageante n'est réalisée. Il n'y a donc rien à prouver en cas de contestation.
+- **Récit 3** (poster un avis) : preuve **importante (\*\*)** car l'élève publie un contenu textuel potentiellement litigieux (diffamation, faux avis). En cas de contentieux, il doit être possible de prouver qui a posté quel avis, à quelle date, depuis quel compte. Les traces constituent une preuve opposable.
 
-#### A.3.2 – Fonction verifPassword
+---
 
-Rappel (A5) :
-- longueur >= 8 donne 1 point longueur ;
-- complexité : minuscule +1, majuscule +2, chiffre +3 ;
-- résultat = points_long * points_comp ;
-- mot de passe valide si résultat == 6.
+### Question A.2.1 – Non-conformité de la gestion des cookies
 
-**a) Politique actuelle (longueur/complexité)**
+En analysant le Document A2 (bandeau cookie actuel) et le Document CNIL 2 :
 
-Pour obtenir 6 :
-- il faut **longueur >= 8** (points_long = 1), sinon résultat = 0.
-- et **points_comp = 6**.
+Le bandeau actuel affiche uniquement un bouton « ✓ Accepter les cookies » sans proposer de bouton **Refuser** ni d'option de **gestion personnalisée**. Il se contente d'indiquer l'usage des cookies sans permettre un choix libre et éclairé.
 
-Or points_comp vaut 6 si et seulement si :
-- présence d’au moins **1 minuscule** (1)
-- présence d’au moins **1 majuscule** (2)
-- présence d’au moins **1 chiffre** (3)
+Depuis la délibération de la CNIL du **17 septembre 2020**, le consentement implicite n'est plus accepté. L'utilisateur doit pouvoir **accepter, refuser ou gérer** les cookies de façon claire et explicite. Le refus doit être aussi simple que l'acceptation.
 
-=> Politique actuelle : **au moins 8 caractères**, avec au minimum **1 minuscule, 1 majuscule, 1 chiffre**. Aucun caractère spécial n’est exigé.
+**Non-conformités identifiées :**
+- Absence d'un bouton « Refuser les cookies ».
+- Absence d'une option « Gérer les cookies » (paramétrage granulaire).
+- Le consentement est présenté comme acquis par défaut (seul « Accepter » est proposé).
 
-**b) Modification pour respecter toutes les recommandations CNIL**
+---
 
-CNIL :
-- longueur minimum **12** ;
-- minuscule (1), majuscule (2), chiffre (3), spécial (4) ;
-- seuil demandé dans l’énoncé : **>= 10**.
+### Question A.2.2 – Données à caractère personnel dans le récit utilisateur n°1
 
-On remplace la logique “produit” par une logique “somme” (plus adaptée au barème CNIL) :
-- points_long = 1 si longueur >= 12 (sinon 0)
-- points_comp = somme des points des 4 classes
-- total = points_long + points_comp
-- valide si total >= 10
+D'après le Document A3 (politique de confidentialité), lors d'une simple consultation du site sans création de compte, les données suivantes sont collectées automatiquement :
 
-Extrait de code (uniquement parties modifiées/ajoutées) :
+| Donnée collectée | Caractère personnel ? | Justification |
+|---|---|---|
+| Adresse IP | **Oui** | Permet d'identifier indirectement un internaute ou son foyer ; reconnue comme donnée personnelle par la CNIL. |
+| Type d'appareil | Non (seul) | Information technique générique ne permettant pas d'identifier une personne. |
+| Teneur des requêtes | Dépend | Peut devenir personnelle si combinée à l'IP (révèle les centres d'intérêt). |
+| Version du navigateur | Non (seul) | Donnée technique générique. |
+| Résolution de l'écran | Non (seul) | Donnée technique générique. |
+| Système d'exploitation / langue | Non (seul) | Donnée technique générique. |
+
+**Seule l'adresse IP est clairement une donnée à caractère personnel** dans ce contexte, car elle permet d'identifier indirectement l'utilisateur ou son terminal. La combinaison de plusieurs données techniques (fingerprinting) pourrait également constituer une donnée personnelle, mais chaque donnée prise isolément ne suffit généralement pas.
+
+---
+
+### Question A.3.1 – Problèmes du mot de passe initial
+
+#### a) Non-conformités sécuritaires du mot de passe initial
+
+En analysant le Document A4 (courriel de confirmation) :
+
+- **Envoi en clair par courriel** : le mot de passe `qamQdVD3` est transmis en texte clair dans un courriel. Si la messagerie est interceptée (attaque de type man-in-the-middle, courriel mal acheminé, accès à la boîte mail), le mot de passe est directement lisible par un tiers.
+- **Absence de changement obligatoire** : l'élève peut conserver ce mot de passe initial « tout au long de sa formation ». Or ce mot de passe a été généré par l'auto-école et potentiellement connu de plusieurs personnes.
+- **Connaissance du mot de passe par un tiers** : l'auto-école qui crée le compte connaît (ou peut connaître) le mot de passe initial, ce qui viole le principe de confidentialité exclusive.
+
+#### b) Meilleure solution pour communiquer le mot de passe initial
+
+La solution recommandée est de **ne jamais envoyer de mot de passe** dans un courriel. À la place :
+
+1. L'auto-école crée le compte et un **lien de première connexion à usage unique et limité dans le temps** est envoyé à l'élève par courriel.
+2. Lors de sa première connexion via ce lien, l'élève est **obligé de définir lui-même son propre mot de passe** (qui ne sera donc jamais connu d'un tiers).
+3. Le lien expire après utilisation ou après un délai court (ex. 24h).
+
+---
+
+### Question A.3.2 – Amélioration de la fonction `verifPassword`
+
+#### a) Politique de mot de passe actuelle
+
+En analysant le code de `verifPassword` (Document A5) :
+
+- **Longueur minimale** : 8 caractères (ligne 5 : `if ($longueur >= 8) { $points_long = 1; }`)
+- **Complexité** :
+  - Au moins une minuscule → +1 point
+  - Au moins une majuscule → +2 points
+  - Au moins un chiffre → +3 points
+- **Score requis** : `$points_long * $points_comp == 6`
+
+Pour obtenir exactement 6 : longueur ≥ 8 (× 1) et complexité = 6 → minuscule (1) + majuscule (2) + chiffre (3) = 6. Donc le mot de passe doit contenir au moins **8 caractères avec minuscule, majuscule et chiffre**.
+
+**Il n'y a pas de vérification de caractère spécial** dans la version actuelle.
+
+#### b) Modifications pour respecter les recommandations CNIL
+
+D'après le Document CNIL 1, la CNIL exige :
+- Longueur **≥ 12 caractères** (au lieu de 8)
+- Au moins une minuscule (+1 pt)
+- Au moins une majuscule (+2 pts)
+- Au moins un chiffre (+3 pts)
+- Au moins un caractère spécial (+4 pts)
+- Score requis **≥ 10**
+
+**Lignes à modifier ou ajouter :**
+
+```php
+// Ligne 1 modifiée : le seuil passe à 10
+$points_total = 10;
+
+// Ligne 5 modifiée : longueur minimale passe à 12
+if ($longueur >= 12) { $points_long = 1; }
+
+// Ligne à ajouter après la ligne 8 : ajout du critère caractère spécial
+if (preg_match("/\W/", $mdp)) { $points_comp = $points_comp + 4; }
+
+// Ligne 10 modifiée : comparaison >= au lieu de ==
+return ($points_total <= $resultat);
+```
+
+**Code modifié complet de la fonction :**
 
 ```php
 function verifPassword($mdp): bool
 {
+    $points_total = 10;                          // modifié (était 6)
     $longueur = strlen($mdp);
     $points_long = 0;
     $points_comp = 0;
-
-    // longueur CNIL
-    if ($longueur >= 12) { $points_long = 1; }
-
-    // complexité CNIL
-    if (preg_match("/[a-z]/", $mdp)) { $points_comp += 1; }
-    if (preg_match("/[A-Z]/", $mdp)) { $points_comp += 2; }
-    if (preg_match("/[0-9]/", $mdp)) { $points_comp += 3; }
-    if (preg_match("/\\W/", $mdp)) { $points_comp += 4; }
-
-    $points_total = $points_long + $points_comp;
-    return ($points_total >= 10);
+    if ($longueur >= 12) { $points_long = 1; }   // modifié (était 8)
+    if (preg_match("/[a-z]/", $mdp)) { $points_comp = $points_comp + 1; }
+    if (preg_match("/[A-Z]/", $mdp)) { $points_comp = $points_comp + 2; }
+    if (preg_match("/[0-9]/", $mdp)) { $points_comp = $points_comp + 3; }
+    if (preg_match("/\W/",    $mdp)) { $points_comp = $points_comp + 4; } // ajouté
+    $resultat = $points_long * $points_comp;
+    return ($points_total <= $resultat);         // modifié (était ==)
 }
-c) Modification / complétion des tests unitaires
+```
 
-Objectif : couvrir longueur, absence de catégories, et cas valide.
+#### c) Modification de la fonction de tests unitaires `testVerifPassword`
 
-PHP
+Les anciens tests doivent être mis à jour pour refléter la nouvelle politique (≥ 12 caractères, caractère spécial obligatoire, score ≥ 10) :
+
+```php
 public function testVerifPassword()
 {
-    // trop court
-    $this->assertSame(false, verifPassword("Qam3"));
+    // Trop court (< 12 caractères) → false
+    $this->assertSame(false, verifPassword("Qam3!"));
 
-    // >=12 mais manque un chiffre
-    $this->assertSame(false, verifPassword("qamQdVDbdAbc"));
+    // 12 caractères mais sans caractère spécial → score = 1*(1+2+3) = 6 < 10 → false
+    $this->assertSame(false, verifPassword("qamQdVDbdAb3"));
 
-    // >=12 mais pas de majuscule
-    $this->assertSame(false, verifPassword("qamqdvdbabc3"));
+    // 12 caractères, minuscules seulement (pas de maj, chiffre, spécial) → false
+    $this->assertSame(false, verifPassword("qamqdvdbdabc"));
 
-    // >=12 mais pas de minuscule
-    $this->assertSame(false, verifPassword("QAMQDVDBABC3"));
+    // 12 caractères, avec majuscule et chiffre mais sans spécial → score = 1*(1+2+3) = 6 < 10 → false
+    $this->assertSame(false, verifPassword("qamQdVDbabc3"));
 
-    // >=12 avec min+maj+chiffre mais pas de spécial => total = 1 + (1+2+3)=7 < 10
-    $this->assertSame(false, verifPassword("Qamqdvdbabc3"));
+    // Ancien mot de passe valide (longueur 8) → désormais refusé car < 12 caractères
+    $this->assertSame(false, verifPassword("qamQdVD3"));
 
-    // cas valide : >=12 + min+maj+chiffre+spécial => total = 1 + (1+2+3+4)=11
-    $this->assertSame(true, verifPassword("Qamqdvdbabc3!"));
+    // 12 caractères, avec minuscule, majuscule, chiffre ET caractère spécial
+    // score = 1*(1+2+3+4) = 10 >= 10 → true
+    $this->assertSame(true, verifPassword("qamQdVD3!abc"));
+
+    // 14 caractères, toutes conditions remplies → true
+    $this->assertSame(true, verifPassword("Qam3!dvDbAbc12"));
 }
-A.3.3 – Renouvellement MDP (base de données)
-a) Requête ALTER TABLE
+```
 
-SQL
+---
+
+### Question A.3.3 – Champ `dateMajMDP` et fonction `renouvelleMDP`
+
+#### a) Requête pour ajouter le champ `dateMajMDP`
+
+En s'appuyant sur la documentation MySQL (Document commun 2) :
+
+```sql
 ALTER TABLE Utilisateur
 ADD dateMajMDP DATE NOT NULL DEFAULT (CURRENT_DATE());
-(NB : selon la version/configuration MySQL, l’expression DEFAULT (CURRENT_DATE()) peut être refusée. Une alternative acceptable dans le cadre du sujet est de mettre une valeur par défaut fixe (ex : DEFAULT '2022-01-01') puis d’initialiser dateMajMDP à la création du compte et à chaque changement de mot de passe (application / procédure / trigger). L’idée attendue : champ obligatoire non nul, initialisé lors de la création.)
+```
 
-b) Fonction stockée renouvelleMDP(idEleve)
+> `NOT NULL` car le champ est obligatoire. `DEFAULT (CURRENT_DATE())` assure l'initialisation automatique à la date du jour lors de la création d'un compte.
 
-Retourne vrai si le mot de passe n’a pas été changé depuis plus de 90 jours.
+#### b) Fonction stockée `renouvelleMDP`
 
-SQL
-CREATE FUNCTION renouvelleMDP(numEleve INT)
+```sql
+CREATE FUNCTION renouvelleMDP(idEleve INT)
 RETURNS BOOLEAN
 BEGIN
-    DECLARE v_date DATE;
+    DECLARE v_dateMaj DATE;
     DECLARE v_retour BOOLEAN DEFAULT FALSE;
 
-    SELECT dateMajMDP INTO v_date
+    SELECT dateMajMDP INTO v_dateMaj
     FROM Utilisateur
-    WHERE id = numEleve;
+    WHERE id = idEleve;
 
-    IF (DATE_ADD(v_date, INTERVAL 90 DAY) < CURRENT_DATE()) THEN
+    IF DATE_ADD(v_dateMaj, INTERVAL 90 DAY) < CURRENT_DATE() THEN
         SET v_retour = TRUE;
     END IF;
 
     RETURN v_retour;
-END;
-Dossier B – Conclusions audit de sécurité
-Mission B1 – Garantie Réussite
-B.1.1 – Conséquence principale pour Easy2Drive
-La conséquence majeure est financière et juridique :
+END
+```
 
-Easy2Drive rembourse des frais à tort (perte financière) ;
-risque de fraude massive, impact réputationnel, et litiges avec d’autres auto-écoles/clients.
-B.1.2
-a) Conditions mal ou non implémentées
+> La fonction retourne `TRUE` si la date de dernière modification du mot de passe + 90 jours est **antérieure** à aujourd'hui, c'est-à-dire si le mot de passe n'a pas été changé depuis plus de 90 jours.
 
-En comparant doc B1 et trigger B2 :
+---
 
-“L’échec date de moins de 6 mois” : le trigger teste :
-SQL
-IF DATE_ADD(NEW.dateEtg, INTERVAL 6 MONTH) >= NOW() THEN SIGNAL 'échec trop ancien'
-C’est inversé : si dateEtg + 6 mois >= maintenant, alors l’échec est récent, donc on ne doit pas rejeter. La condition correcte pour “trop ancien” est :
+## DOSSIER B – Prise en compte des conclusions de l'audit de sécurité
 
-si dateEtg + 6 mois < NOW() => trop ancien.
-“Avoir passé au moins 4 examens blancs” : le trigger calcule une moyenne sur les 4 meilleures notes, mais ne vérifie pas qu’il existe au moins 4 examens.
+---
 
-“25 séries de quiz” : le trigger compte des lignes dans Evaluer, ce qui correspond bien aux séries réalisées. En revanche, il utilise NEW.id :
+### Question B.1.1 – Conséquence principale d'une déclaration abusive d'échec ETG
 
-Or, d’après le schéma relationnel (doc commun 1), la table Eleve est identifiée par idUtilisateur et les tables Evaluer(idEleve, ...) et Passer(idEleve, ...) référencent l’identifiant de l’élève.
-Il faut donc vérifier la cohérence des clés et compter avec le bon identifiant (ex : NEW.idUtilisateur si c’est le nom de la colonne, sinon NEW.id si la table Eleve a bien une colonne id). => Risque : compter les séries/examens d’un mauvais élève, donc attribuer la garantie à tort.
-“Garantie accordée une seule fois après le premier échec” : le trigger gère seulement le cas OLD.echecEtg = TRUE AND NEW.echecEtg = TRUE (donc un deuxième échec déclaré).
-Mais la règle métier dit aussi que la garantie ne doit pas être attribuée deux fois, même si l’auto-école tente de réactiver le flag garantieReussite.
-=> Il faut donc empêcher toute ré-attribution si OLD.garantieReussite est déjà à TRUE (contrôle sur le champ garantieReussite).
-b) Corrections (parties à modifier/ajouter)
+La principale conséquence pour Easy2Drive est une **perte financière directe** : en accordant abusivement la « Garantie Réussite », l'entreprise rembourse à l'élève des frais de présentation à un nouvel examen alors que les conditions ne sont pas réellement remplies. À grande échelle, si de nombreuses auto-écoles exploitent cette faille, le coût pourrait être très significatif et menacer la viabilité économique de cette offre commerciale.
 
-Extraits (en adaptant le nom de clé élève si besoin) :
+Il y a également un risque de **préjudice d'image** si la fraude est découverte publiquement, et un risque **juridique** si Easy2Drive est tenue pour responsable de ne pas avoir sécurisé ce processus.
 
-SQL
--- empêcher une seconde attribution
-IF OLD.garantieReussite = TRUE AND NEW.garantieReussite = TRUE THEN
-    SIGNAL SQLSTATE '10006'
-    SET MESSAGE_TEXT = 'Garantie réussite : déjà attribuée';
-END IF;
+---
 
--- test de date : trop ancien si dateETG + 6 mois < NOW()
+### Question B.1.2 – Analyse et correction du déclencheur `check_garantie_reussite`
+
+#### a) Conditions non implémentées ou mal implémentées
+
+En comparant le Document B1 (conditions) avec le Document B2 (code du trigger) :
+
+| Condition (Document B1) | État dans le trigger |
+|---|---|
+| La Garantie Réussite n'est accordée qu'une seule fois après le **premier** échec | ✅ Ligne 7 : vérifié (`OLD.echecEtg = TRUE AND NEW.echecEtg = TRUE`) |
+| L'échec doit dater de **moins de 6 mois** | ❌ **Mal implémenté** : ligne 12, la condition est inversée. `DATE_ADD(NEW.dateEtg, INTERVAL 6 MONTH) >= NOW()` signifie que l'on déclenche l'erreur quand l'échec DATE **de moins de 6 mois**, alors qu'il faudrait déclencher l'erreur quand l'échec date **de plus de 6 mois**. |
+| Au moins **25 séries** de quiz passées | ✅ Ligne 16-20 : correctement vérifié |
+| Au moins **4 examens blancs** passés | ❌ **Non implémenté** : aucune vérification du nombre d'examens blancs passés |
+| Moyenne d'au moins **34/40** sur les **4 meilleurs** examens blancs | ✅ Lignes 21-25 : correctement implémenté |
+
+#### b) Code source corrigé
+
+```sql
+-- Correction ligne 12 : inversion de la condition (> au lieu de >=)
 IF DATE_ADD(NEW.dateEtg, INTERVAL 6 MONTH) < NOW() THEN
     SIGNAL SQLSTATE '10002'
     SET MESSAGE_TEXT = 'Garantie réussite : échec trop ancien';
 END IF;
 
--- vérifier nb examens blancs >= 4
-DECLARE v_nbExam INT;
-SELECT COUNT(*) INTO v_nbExam FROM Passer WHERE idEleve = NEW.idUtilisateur;
-IF v_nbExam < 4 THEN
+-- Ajout : vérification du nombre d'examens blancs (au moins 4)
+DECLARE v_nbExamen INT;
+
+SELECT COUNT(*) INTO v_nbExamen
+FROM Passer
+WHERE idEleve = NEW.id;
+
+IF v_nbExamen < 4 THEN
     SIGNAL SQLSTATE '10004'
-    SET MESSAGE_TEXT = 'Garantie réussite : nombre examens blancs insuffisant';
+    SET MESSAGE_TEXT = 'Garantie réussite : nombre d examens blancs insuffisant';
 END IF;
+```
 
--- adapter l'identifiant élève selon schéma relationnel
-SELECT COUNT(*) INTO v_nbSerie FROM Evaluer WHERE idEleve = NEW.idUtilisateur;
+**Trigger complet corrigé :**
 
-SELECT AVG(examenScore) INTO v_scoreMoyen
-FROM (
-    SELECT examenScore
-    FROM Passer
-    WHERE idEleve = NEW.idUtilisateur
-    ORDER BY examenScore DESC
-    LIMIT 4
-) AS MeilleureNotes;
-Mission B2 – Traçage RGPD
-B.2.1 – Schéma BD_RGPD_LOGS (proposition)
-Objectif : journaliser qui (utilisateur + rôle) fait quoi (action) sur quelle donnée (table + id enregistrement) et quand.
+```sql
+CREATE TRIGGER check_garantie_reussite
+BEFORE UPDATE ON Eleve
+FOR EACH ROW
+BEGIN
+    DECLARE v_nbSerie INT;
+    DECLARE v_nbExamen INT;
+    DECLARE v_scoreMoyen DOUBLE;
 
-Proposition minimale :
+    IF OLD.echecEtg = TRUE AND NEW.echecEtg = TRUE THEN
+        SIGNAL SQLSTATE '10001'
+        SET MESSAGE_TEXT = 'Garantie réussite : deuxième échec';
+    END IF;
 
-UtilisateurLog(idUtilisateur, nom, prenom) (ou uniquement idUtilisateur si on veut minimiser les données dupliquées)
-Role(idRole, libele) : Directeur/Formateur/Élève/Modérateur
-Action(idAction, libele) : CONSULTATION, INSERTION, MODIFICATION, SUPPRESSION
-Evenement( idEvent PK, dateHeure DATETIME, idUtilisateur, idRole, idAction, tableCible VARCHAR, idEnregistrement INT, idAutoEcole INT NULL, details VARCHAR/TEXT NULL )
-Remarques :
+    -- Correction : < NOW() au lieu de >= NOW()
+    IF DATE_ADD(NEW.dateEtg, INTERVAL 6 MONTH) < NOW() THEN
+        SIGNAL SQLSTATE '10002'
+        SET MESSAGE_TEXT = 'Garantie réussite : échec trop ancien';
+    END IF;
 
-tableCible + idEnregistrement permettent de répondre aux questions du DPO.
-idAutoEcole aide aux recherches “pour une auto-école donnée”.
-details peut contenir des métadonnées non sensibles (ex : champs modifiés) sans stocker la donnée personnelle elle-même.
-B.2.2 – Création utilisateur MySQL
-Serveur Web : Easy2Drive.fr (hôte MySQL autorisé à se connecter).
+    SELECT COUNT(*) INTO v_nbSerie FROM Evaluer WHERE idEleve = NEW.id;
+    IF v_nbSerie < 25 THEN
+        SIGNAL SQLSTATE '10003'
+        SET MESSAGE_TEXT = 'Garantie réussite : nombre de séries insuffisant';
+    END IF;
 
-SQL
-CREATE USER 'APPLI_RGPD_LOGS'@'Easy2Drive.fr' IDENTIFIED BY 'MotDePasseSolideAChanger';
-(Le mot de passe doit être fort et stocké dans un coffre/variable d’environnement côté appli.)
+    -- Ajout : vérification du nombre d'examens blancs
+    SELECT COUNT(*) INTO v_nbExamen FROM Passer WHERE idEleve = NEW.id;
+    IF v_nbExamen < 4 THEN
+        SIGNAL SQLSTATE '10004'
+        SET MESSAGE_TEXT = 'Garantie réussite : nombre d examens blancs insuffisant';
+    END IF;
 
-B.2.3 – Permission minimale (insert uniquement)
-SQL
+    SELECT AVG(examenScore) INTO v_scoreMoyen FROM (
+        SELECT examenScore FROM Passer
+        WHERE idEleve = NEW.id
+        ORDER BY examenScore DESC LIMIT 4
+    ) AS MeilleureNotes;
+
+    IF v_scoreMoyen < 34 THEN
+        SIGNAL SQLSTATE '10005'
+        SET MESSAGE_TEXT = 'Garantie réussite : score examens blancs insuffisant';
+    END IF;
+
+    -- Garantie Réussite attribuée
+END
+```
+
+---
+
+### Question B.2.1 – Complétion du schéma de la base `BD_RGPD_LOGS`
+
+D'après l'entretien (Document B3) et la maquette (Document B4), chaque événement journalisé doit permettre de savoir :
+- **Qui** a agi (utilisateur, nom, prénom, rôle)
+- **Quelle action** a été effectuée (consultation, insertion, modification, suppression)
+- **Sur quelle table** et **quel enregistrement** (n° ID de l'enregistrement concerné)
+- **Quand** (date et heure)
+- **Pour quelle auto-école** (contexte organisationnel)
+
+**Schéma relationnel complété :**
+
+```
+Auto-Ecole (id, raisonSociale, codePostal, ville)
+  Clé primaire : id
+
+Utilisateur (id, nom, prenom, idAutoEcole, idRole)
+  Clé primaire : id
+  Clé étrangère : idAutoEcole → Auto-Ecole(id)
+  Clé étrangère : idRole → Role(id)
+
+Role (id, nom)
+  Clé primaire : id
+  Valeurs possibles : 'Directeur', 'Formateur', 'Eleve', 'Moderateur'
+
+Evenement (id, dateHeure, action, nomTable, idEnregistrement, idUtilisateur)
+  Clé primaire : id
+  Clé étrangère : idUtilisateur → Utilisateur(id)
+  action : 'Consultation' | 'Création' | 'Modification' | 'Suppression'
+```
+
+**Diagramme de classes complété (description textuelle) :**
+
+```
+Auto-Ecole (1) ────── (1..*) Utilisateur (1) ────── (1..*) Evenement
+                              Utilisateur (1) ────── (1) Role
+```
+
+---
+
+### Question B.2.2 – Créer l'utilisateur `APPLI_RGPD_LOGS`
+
+L'application Easy2Drive se connecte depuis le serveur `Easy2Drive.fr` (Document B5) :
+
+```sql
+CREATE USER 'APPLI_RGPD_LOGS'@'Easy2Drive.fr'
+IDENTIFIED BY 'motDePasseSecurise';
+```
+
+---
+
+### Question B.2.3 – Attribuer les droits nécessaires
+
+L'application doit uniquement **ajouter des données** (pas de lecture, modification ou suppression) → droit `INSERT` uniquement :
+
+```sql
 GRANT INSERT ON BD_RGPD_LOGS.* TO 'APPLI_RGPD_LOGS'@'Easy2Drive.fr';
-B.2.4
-a) Durée de conservation conforme CNIL
+```
 
-Doc CNIL 3 : période glissante ≤ 6 mois (sauf obligation légale/risque important).
+---
 
-=> Proposer : 6 mois.
+### Question B.2.4 – Conservation et purge des journaux
 
-b) Document RGPD où consigner la durée
+#### a) Durée de conservation conforme CNIL
 
-Dans le registre des activités de traitement (registre RGPD / registre des traitements) qui doit mentionner les durées de conservation.
+D'après le Document CNIL 3 : *« Ces journaux doivent conserver les événements sur une **période glissante ne pouvant excéder six mois** (sauf obligation légale ou risque particulièrement important) »*.
 
-c) Solution technique de purge automatique (sans réalisation)
+La durée de conservation recommandée est donc de **6 mois maximum**.
 
-Mettre en place :
+#### b) Document RGPD où consigner cette durée
 
-un événement planifié MySQL (EVENT SCHEDULER) qui supprime quotidiennement les logs plus vieux que 6 mois ; ou
-un cron côté serveur exécutant une procédure stockée de purge.
-Exemple de principe :
+Cette durée doit être consignée dans le **registre des activités de traitement** (obligatoire pour les responsables de traitement selon l'article 30 du RGPD). Ce registre recense notamment : la finalité du traitement, les catégories de données collectées, les durées de conservation et les mesures de sécurité mises en place.
 
-DELETE FROM Evenement WHERE dateHeure < DATE_SUB(NOW(), INTERVAL 6 MONTH);
-Dossier C – Contre-mesures gestion des avis
-Mission C1 – Saisie d’un avis
-C1.1 – Méthode Eleve::getNbMaxAvisAtteint
-On veut vrai si l’élève a déjà déposé 3 avis (tableau 0..3).
+#### c) Solution technique pour la purge automatique
 
-PHP
+Mettre en place un **événement planifié MySQL** (MySQL Event Scheduler) qui s'exécute automatiquement selon une fréquence définie (par exemple chaque nuit) et supprime tous les enregistrements de la base `BD_RGPD_LOGS` dont la date est antérieure à 6 mois :
+
+```sql
+-- Exemple de description de la solution (sans implémentation complète) :
+-- Créer un EVENT MySQL qui tourne tous les jours à minuit
+-- et exécute : DELETE FROM Evenement WHERE dateHeure < DATE_SUB(NOW(), INTERVAL 6 MONTH)
+```
+
+Cette solution est entièrement automatique, ne nécessite aucune intervention humaine et garantit le respect permanent de la durée de conservation.
+
+---
+
+## DOSSIER C – Mise en œuvre de contre-mesures dans la gestion des avis
+
+---
+
+### Question C1.1 – Méthode `getNbMaxAvisAtteint` de la classe `Eleve`
+
+D'après le Document C1, `$lesAvis` est un tableau de 0 à 3 `Avis`. La méthode doit retourner `true` si l'élève a déjà déposé 3 avis :
+
+```php
 public function getNbMaxAvisAtteint(): bool
 {
-    return count($this->lesAvis) >= 3;
+    return (count($this->lesAvis) >= 3);
 }
-C1.2 – Contrôleur AvisEleveController::monAvis
-Le formulaire ne doit être accessible que si :
+```
 
-soit l’élève n’a pas encore d’avis,
-soit son dernier avis a été modéré et rejeté (modere = true mais publie = false),
-et il ne doit pas avoir atteint 3 avis refusés.
-Avec les seules méthodes visibles : getNbMaxAvisAtteint() et getDernierAvis()->getModere().
+---
 
-Condition de blocage (exemple cohérent) :
+### Question C1.2 – Complétion de la méthode `monAvis`
 
-si l’élève a déjà un avis non modéré (en attente) => pas accès
-ou si nb max atteint => pas accès
-PHP
-if ( $user->getNbMaxAvisAtteint() || (count($user->getLesAvis()) > 0 && $user->getDernierAvis()->getModere() == false) ) {
+L'élève ne doit pas pouvoir accéder au formulaire si :
+- Il a déjà atteint le nombre maximum d'avis (3), **OU**
+- Il a déjà un avis en attente de modération (non encore modéré).
+
+En s'appuyant sur Document C1 (`getDernierAvis()`, `getModere()`) et Document C3 :
+
+```php
+if (
+    $user->getNbMaxAvisAtteint()
+    || (count($user->getLesAvis()) > 0 && !$user->getDernierAvis()->getModere())
+) {
+    // l'utilisateur est redirigé vers l'accueil
     return $this->redirectToRoute('home');
 }
-(Remarque : pour être totalement conforme au scénario, il faudrait aussi distinguer modéré et publié (rejet = modéré=true et publié=false) et compter le nombre d’avis refusés ; l’énoncé mentionne getNbAvisRefuse() dans le tableau modérateur, donc une implémentation complète s’appuierait idéalement sur cette information.)
+```
 
-C1.3 – Injection SQL
-Injection fournie : elle ferme la chaîne et ajoute plusieurs tuples à l’INSERT.
+**Explication :**
+- `getNbMaxAvisAtteint()` → l'élève a déjà 3 avis : accès bloqué définitivement.
+- `count($user->getLesAvis()) > 0 && !$user->getDernierAvis()->getModere()` → l'élève a un avis en cours de modération (non encore traité) : accès bloqué jusqu'à la décision du modérateur.
 
-a) Résultat dans la base après réussite
+---
 
-Au lieu d’insérer un seul avis, la requête injectée entraîne l’insertion de plusieurs avis supplémentaires (une liste de tuples) dans la table Avis, avec dateDepot = now(), et des champs forcés (publie=true, modere=true) ainsi qu’un idEleve imposé (ici 5 dans l’injection). On obtient donc plusieurs nouveaux enregistrements “validés” directement, sans passer par la modération normale.
+### Question C1.3 – Analyse de l'injection SQL
 
-b) Comment l’injection contourne les mesures précédentes
+#### a) Résultat dans la base de données après l'injection
 
-Les mesures prévoyaient de limiter l’élève à un avis en attente de modération et à 3 tentatives. Or l’injection permet :
+Le champ `txtContenu` contient une injection qui ferme prématurément la requête `INSERT` en cours et ajoute plusieurs enregistrements supplémentaires dans la table `Avis`. Depuis le compte de l'élève 12, l'injection insérerait les enregistrements suivants dans la table `Avis` :
 
-de multiplier les insertions en une seule soumission ;
-de forcer des champs (publie, modere) à true, contournant la modération ;
-potentiellement d’usurper un autre élève (idEleve=5).
-c) Solution de correction (sans réalisation)
+1. `'Quelle incompétence!'` (date=now(), publie=true, modere=true, note=5)
+2. `'A fuir absolument'` (date=now(), publie=true, modere=true, note=5)
+3. `'Accueil froid, moniteurs désagréables'` (date=now(), publie=true, modere=true, note=5)
+4. `'Aucun point positif'` (date=now(), publie=true, modere=true, note=5)
+5. `'Choisissez une autre auto-école'` (date=now(), publie=true, modere=true, note=5)
+6. `'formation OK` (avis de l'élève 12, partiellement injecté)
 
-Utiliser des requêtes préparées avec paramètres liés (PDO prepare() + bindParam()), et ne jamais concaténer l’entrée utilisateur dans SQL.
+Ces avis sont insérés avec `publie=true` et `modere=true`, ce qui signifie qu'ils sont **immédiatement publiés et considérés comme modérés** sans passer par le processus de modération.
 
-Ex :
+#### b) Comment cette injection contourne les mesures mises en place
 
-INSERT INTO avis(contenu, dateDepot, publie, modere, idEleve) VALUES (:contenu, NOW(), :publie, :modere, :idEleve)
-Et éventuellement :
+Les mesures précédentes (vérification du nombre d'avis, accès au formulaire conditionné) agissent au niveau **applicatif PHP** et vérifient uniquement qu'un seul avis est soumis via le formulaire. L'injection SQL contourne totalement ces vérifications car :
 
-validation/encodage côté serveur, journalisation des tentatives, et WAF/filtrage, mais la protection principale reste la requête paramétrée.
-Mission C2 – Modération
-C2.1 – PdoEasy2Drive::getDoublonMail
-Objectif : vrai si l’email correspond à plusieurs élèves.
+- Elle agit directement au niveau de la **requête SQL** dans `insertUnAvis()`.
+- En forgeant le contenu du champ texte, l'attaquant insère **plusieurs lignes d'un seul coup** dans la même requête.
+- Les avis injectés ont `publie=true` et `modere=true`, **contournant la modération** a posteriori.
+- La limite de 3 avis par élève est contournée car les enregistrements sont insérés directement en base sans passer par la logique applicative.
 
-PHP
+#### c) Solution pour corriger la vulnérabilité
+
+Utiliser des **requêtes préparées avec paramètres liés** (prepared statements) au lieu de la concaténation de chaînes dans la méthode `insertUnAvis()`. Les requêtes préparées séparent le code SQL des données, rendant toute injection impossible car les valeurs saisies par l'utilisateur sont traitées comme des données pures et non comme du code SQL.
+
+Exemple de correction dans `insertUnAvis()` :
+
+```php
+public function insertUnAvis(Avis $unAvis)
+{
+    $req = "INSERT INTO avis (contenu, dateDepot, publie, modere, idEleve)
+            VALUES (:contenu, now(), :publie, :modere, :idEleve)";
+    $res = PdoEasy2Drive::$monPdo->prepare($req);
+    $res->bindParam(':contenu', $unAvis->getContenu(), PDO::PARAM_STR);
+    $res->bindParam(':publie',  $unAvis->getPublie(),  PDO::PARAM_BOOL);
+    $res->bindParam(':modere',  $unAvis->getModere(),  PDO::PARAM_BOOL);
+    $res->bindParam(':idEleve', $unAvis->getLEleve()->getId(), PDO::PARAM_INT);
+    $res->execute();
+}
+```
+
+---
+
+### Question C2.1 – Méthode `getDoublonMail` de `PdoEasy2Drive`
+
+La méthode doit retourner `true` si l'adresse email passée en paramètre apparaît chez **plusieurs élèves** dans la table `Utilisateur` :
+
+```php
 public function getDoublonMail($unEmail): bool
 {
-    $req = "SELECT COUNT(*) AS nb FROM utilisateur WHERE email = :mail";
+    $req = "SELECT COUNT(*) AS nb
+            FROM Utilisateur
+            JOIN Eleve ON Utilisateur.id = Eleve.idUtilisateur
+            WHERE Utilisateur.email = :email";
     $res = PdoEasy2Drive::$monPdo->prepare($req);
-    $res->bindParam(':mail', $unEmail);
+    $res->bindParam(':email', $unEmail, PDO::PARAM_STR);
     $res->execute();
-    $ligne = $res->fetch();
-    return ($ligne['nb'] >= 2);
+    $result = $res->fetch();
+    return ($result['nb'] > 1);
 }
-(Remarque : si on veut limiter aux élèves : JOIN eleve ON eleve.idUtilisateur = utilisateur.id.)
+```
 
-C2.2 – AvisModerateurController::listeAvis
-On doit transmettre à la vue une variable $doublonMail (ou une info par élève) indiquant si l’adresse est en double.
+> La méthode utilise une **requête préparée** (bonne pratique anti-injection SQL) et retourne `true` si l'adresse est associée à plus d'un élève.
 
-Dans la boucle :
+---
 
-PHP
-$doublonMail = $PdoEasy2Drive->getDoublonMail($unEleve->getEmail());
+### Question C2.2 – Complétion de `listeAvis` dans `AvisModerateurController`
 
-$tabDernierAvisParEleve[] = [
-    'leEleve' => $unEleve->getIdentite(),
-    'avis' => $unEleve->getDernierAvis(),
-    'nbRefus' => $unEleve->getNbAvisRefuse(),
-    'pasDeNeph' => $pasDeNeph,
-    'doublonMail' => $doublonMail
-];
-Et côté render, rien à changer si la vue exploite lesAvisAModerer.
+Il faut calculer `$doublonMail` pour chaque élève en appelant `getDoublonMail()` avec l'email de l'élève, puis l'ajouter au tableau `$tabDernierAvisParEleve` :
 
-Code
+```php
+foreach ($lesEleves as $unEleve) {
+    if ($unEleve->getNeph() == null) {
+        $pasDeNeph = true;
+    } else {
+        $pasDeNeph = false;
+    }
+
+    // Ajout : vérification du doublon d'adresse email
+    $doublonMail = $PdoEasy2Drive->getDoublonMail($unEleve->getEmail());
+
+    $tabDernierAvisParEleve[] = [
+        'leEleve'    => $unEleve->getIdentite(),
+        'avis'       => $unEleve->getDernierAvis(),
+        'nbRefus'    => $unEleve->getNbAvisRefuse(),
+        'pasDeNeph'  => $pasDeNeph,
+        'doublonMail' => $doublonMail   // ajouté
+    ];
+}
+
+return $this->render(
+    'avis/tbbModerateur.html.twig',
+    ['lesAvisAModerer' => $tabDernierAvisParEleve]
+);
+```
+
+---
+
+*Correction réalisée sur la base du sujet BTS SIO SLAM – U6 Cybersécurité – Session 2022 (Code sujet : 22SI5SLAM)*
