@@ -1,495 +1,463 @@
-# Correction – Cas GSIC (BTS SIO SLAM – U6 Cybersécurité) – Session 2024
-
-> Remarque : ce corrigé est rédigé à partir du texte fourni dans la conversation. Certains éléments annoncés dans le sujet (diagramme BdInventaire – doc A3, captures Postman / extrait table Formations – doc B7, diagramme de classes complet – doc C1) ne sont pas présents ici ; lorsque c’est bloquant, je propose une réponse cohérente et j’indique les hypothèses.
-
----
-
-## DOSSIER A – Préparation de la mise en place d’une authentification unique (SSO)
-
-### A1 – Fichiers actuels de journalisation des authentifications
-
-#### A1.1 – Objectif réglementaire de la traçabilité des accès
-
-L’objectif réglementaire de la traçabilité des accès (journalisation) est de :
-
-- **détecter et analyser** les événements de sécurité (accès non autorisés, tentatives d’intrusion, usurpations) ;
-- **prouver** qu’un accès / une action a eu lieu (non-répudiation « pratique » : éléments de preuve) ;
-- **répondre aux obligations de sécurité** liées aux traitements de données (exigence d’accountability du RGPD, obligations de sécurité, et bonnes pratiques type ANSSI/CNIL) ;
-- permettre les **investigations** (forensique) et la **reconstruction** d’un incident.
-
-En synthèse : *identifier qui a fait quoi, quand, depuis quel équipement / quel contexte*, pour pouvoir sécuriser et auditer.
-
-#### A1.2 – Archivage vs sauvegarde, et intérêt de l’archivage des journaux
-
-**a) Différence d’objectif**
-
-- **Sauvegarde** : objectif principal = **restauration** après incident (panne, suppression accidentelle, chiffrement ransomware). On cherche à retrouver l’état des données.
-- **Archivage** : objectif principal = **conservation sur la durée** (souvent figée), pour des besoins **légaux, probatoires, historiques** et d’audit. On cherche à conserver des traces, pas à « revenir en arrière ».
-
-**b) Pourquoi archiver les fichiers de logs d’authentification ?**
-
-Les journaux d’authentification sont archivés afin de :
-
-- disposer d’un **historique** en cas d’enquête interne / judiciaire ;
-- **corréler** des événements sur plusieurs semaines/mois (ex : attaques « low and slow ») ;
-- démontrer la **conformité** (contrôle interne, audits, exigences PSSI).
-
-#### A1.3 – Confidentialité et intégrité lors de l’archivage : sont-elles garanties ?
-
-**Confidentialité : plutôt oui** (mais à nuancer)
-
-- Les journaux sont **compressés avec chiffrement** avant transfert sur bandes : si le chiffrement est correctement mis en œuvre (algorithme robuste, gestion de clés correcte), la confidentialité est assurée pendant le transport et au repos sur bande.
-- Point de vigilance : la confidentialité dépend fortement de la **gestion des clés** (stockage, rotation, contrôle d’accès). Le sujet ne donne pas ces détails.
-
-**Intégrité : non, pas pleinement garantie**
-
-- Il est explicitement indiqué : **« sans vérification des sommes de contrôles (empreinte numérique) »**.
-- Sans empreinte (hash) et sans mécanisme de signature / scellement, on ne peut pas prouver qu’un fichier archivé n’a pas été altéré entre la création et la consultation, ni détecter une corruption.
-
-Conclusion : **confidentialité vraisemblablement assurée par le chiffrement**, mais **intégrité non garantie** car absence de contrôle d’empreinte (idéalement : hash + signature, ou stockage WORM / coffre-fort numérique, ou chaîne de hachage).
+# Correction – BTS SIO Option SLAM · Session 2024
+## U6 – Cybersécurité des services informatiques
+### Cas GSIC (Sdis de la ville de M.)
 
 ---
 
-### A2 – Inventaire des comptes d’authentification existants
+## DOSSIER A – Préparation de la mise en place d'une authentification unique (SSO)
 
-#### A2.1 – Vue `v_liste_comptes`
+---
 
-Objectif : obtenir un flux unifié avec le schéma :
+### Question A1.1 – Objectif réglementaire de la traçabilité des accès
 
-`v_liste_comptes (origine, nom, prenom, compte_login, roles)`
+La traçabilité des accès a pour objectif réglementaire de **permettre la détection, l'investigation et la preuve** d'incidents de sécurité. Elle répond notamment aux exigences du **RGPD** (Règlement Général sur la Protection des Données) qui impose aux responsables de traitement de mettre en place des mesures techniques garantissant la sécurité des données personnelles, ainsi qu'aux recommandations de la **CNIL** et aux référentiels de sécurité (RGS, ISO 27001).
 
-Données sources :
+Concrètement, les journaux d'authentification permettent de :
+- Vérifier qui a accédé à quelles ressources, et à quel moment.
+- Détecter des tentatives d'intrusion ou des usurpations d'identité.
+- Constituer des preuves en cas de litige ou d'investigation judiciaire.
+- Vérifier le respect de la politique de sécurité et des habilitations.
 
-- **Personnel.Compte_Employe** : `login`, `nomUser`, `prenomUser`, `rolesUser`
-- **Formation.Utilisateur** : `compte`, `nom`, `prenom` (pas de rôles)
-- **Logistique.Compte** : `compte`, `nom_compte`, `prenom_compte`, `roles_compte`
-- **Prevention.User** : `login`, `nom`, `prenom`, `role`
+---
 
-Vue (MySQL) :
+### Question A1.2
+
+#### a) Différence entre archivage et sauvegarde
+
+| | Sauvegarde | Archivage |
+|---|---|---|
+| **Objectif** | Restaurer rapidement des données en cas de perte ou d'incident | Conserver des données sur le long terme à des fins légales, réglementaires ou probatoires |
+| **Durée** | Court à moyen terme | Long terme |
+| **Accès** | Fréquent (restauration opérationnelle) | Rare (consultation ponctuelle, contrôle) |
+| **Modification** | Les données peuvent être écrasées/remplacées | Les données doivent être immuables |
+
+#### b) Pourquoi les fichiers de journalisation des authentifications sont archivés
+
+Les fichiers de journalisation des authentifications sont archivés car ils constituent des **preuves légales** en cas d'incident de sécurité, d'audit ou d'enquête. La réglementation (RGPD, CNIL) impose de pouvoir justifier des accès aux données personnelles sur une durée déterminée. L'archivage garantit la disponibilité de ces preuves sur le long terme, indépendamment des cycles de sauvegarde opérationnels.
+
+---
+
+### Question A1.3 – Confidentialité et intégrité lors de l'archivage
+
+**Confidentialité :**
+Les fichiers de journalisation sont compressés **avec chiffrement** avant leur transfert sur bandes magnétiques. La confidentialité est donc **garantie** : même si une bande était dérobée ou interceptée lors du transfert sur le réseau interne, les données seraient illisibles sans la clé de déchiffrement.
+
+**Intégrité :**
+L'intégrité **n'est pas garantie**. La procédure précise explicitement que la compression se fait **sans vérification des sommes de contrôle (empreinte numérique)**. Sans calcul et vérification de hash (MD5, SHA-256…) avant et après le transfert, il est impossible de détecter une altération accidentelle (erreur de transmission) ou intentionnelle (modification malveillante) des fichiers archivés.
+
+**Recommandation :** Il faudrait calculer une empreinte numérique (hash) des fichiers avant leur transfert et la stocker séparément, afin de pouvoir vérifier ultérieurement que les archives n'ont pas été altérées.
+
+---
+
+### Question A2.1 – Vue `v_liste_comptes`
+
+En s'appuyant sur le Document A1 (structure des 4 bases) et la documentation MySQL (Document A2) avec l'opérateur `UNION` :
 
 ```sql
-CREATE OR REPLACE VIEW BdInventaire.v_liste_comptes
-(origine, nom, prenom, compte_login, roles)
-AS
-SELECT
-  'Personnel'        AS origine,
-  ce.nomUser         AS nom,
-  ce.prenomUser      AS prenom,
-  ce.login           AS compte_login,
-  ce.rolesUser       AS roles
-FROM Personnel.Compte_Employe ce
+CREATE VIEW BdInventaire.v_liste_comptes (origine, nom, prenom, compte_login, roles) AS
 
-UNION
+    SELECT 'Personnel', nomUser, prenomUser, login, rolesUser
+    FROM Personnel.Compte_Employe
 
-SELECT
-  'Formation'        AS origine,
-  u.nom              AS nom,
-  u.prenom           AS prenom,
-  u.compte           AS compte_login,
-  NULL               AS roles
-FROM Formation.Utilisateur u
+    UNION
 
-UNION
+    SELECT 'Formation', nom, prenom, compte, NULL
+    FROM Formation.Utilisateur
 
-SELECT
-  'Logistique'       AS origine,
-  c.nom_compte       AS nom,
-  c.prenom_compte    AS prenom,
-  c.compte           AS compte_login,
-  c.roles_compte     AS roles
-FROM Logistique.Compte c
+    UNION
 
-UNION
+    SELECT 'Logistique', nom_compte, prenom_compte, compte, roles_compte
+    FROM Logistique.Compte
 
-SELECT
-  'Prevention'       AS origine,
-  pu.nom             AS nom,
-  pu.prenom          AS prenom,
-  pu.login           AS compte_login,
-  pu.role            AS roles
-FROM Prevention.User pu;
+    UNION
+
+    SELECT 'Prevention', nom, prenom, login, role
+    FROM Prevention.User;
 ```
 
-> Remarque : `UNION` supprime les doublons ; si on souhaite conserver toutes les lignes sans déduplication, utiliser `UNION ALL`.
+> Remarque : la base `Formation` ne contient pas de champ rôle ; on retourne donc `NULL` pour cette colonne.
 
-#### A2.2 – Compléter la modélisation BdInventaire
+---
 
-Sans le document A3, on propose une modélisation minimale permettant à InventaireHabil :
+### Question A2.2 – Complétion de la modélisation de la base BdInventaire
 
-- d’enregistrer les comptes,
-- d’identifier l’application à partir de `origine`,
-- de gérer les **rôles multiples** (Personnel/Logistique : rôles séparés par virgules),
-- de n’attribuer un identifiant à chaque rôle que s’il est rattaché à **une seule application**.
+D'après le diagramme de classes et le schéma entité-association (Document A3) :
+- `APPLICATION` a un `id`, un `nomApplication` et un `nomBDD`.
+- `COMPTE` a un `id`.
+- La relation `Utiliser` est de cardinalité 0,n — 1,1 : un compte utilise une application, une application est utilisée par 0 à n comptes.
 
-Proposition (tables relationnelles) :
+Il manque dans la modélisation la table de liaison entre `COMPTE` et les rôles, ainsi que les attributs nécessaires au programme `InventaireHabil`. La modélisation complétée est :
 
-- **Application**(`idApp` PK, `nom` UNIQUE)  
-  Ex : Personnel, Formation, Logistique, Prevention
-- **Compte**(`idCompte` PK, `login`, `nom`, `prenom`, `idApp` FK→Application)
-- **Role**(`idRole` PK, `libelle`, `idApp` FK→Application)  
-  Un rôle appartient à une seule application.
-- **CompteRole**(`idCompte` FK→Compte, `idRole` FK→Role, PK(`idCompte`,`idRole`))
+**Schéma relationnel de BdInventaire :**
 
-Cette structure permet :
+```
+Application(id, nomApplication, nomBDD)
+  Clé primaire : id
 
-- 1 compte → 0..n rôles,
-- un rôle → 1 application,
-- et la normalisation de la liste de rôles initialement « CSV ».
+Compte(id, login, nom, prenom, idApplication)
+  Clé primaire : id
+  Clé étrangère : idApplication → Application(id)
 
-#### A2.3 – Compte MySQL `prep_sso` et droits minimaux
+Role(id, nomRole, idApplication)
+  Clé primaire : id
+  Clé étrangère : idApplication → Application(id)
 
-**a) Création du compte** (utilisation locale, comme demandé) :
-
-```sql
-CREATE USER 'prep_sso'@'localhost' IDENTIFIED BY 'MotDePasseRobuste_AChanger';
+PossederRole(idCompte, idRole)
+  Clé primaire : idCompte, idRole
+  Clé étrangère : idCompte → Compte(id)
+  Clé étrangère : idRole → Role(id)
 ```
 
-**b) Droits strictement nécessaires**
+> Cela permet d'associer plusieurs rôles à un compte (relation n,n entre Compte et Role) et de lier chaque rôle à une seule application conformément aux spécifications.
 
-Le programme InventaireHabil :
+---
 
-- lit la vue `BdInventaire.v_liste_comptes` → nécessite des droits `SELECT` sur la vue (et potentiellement sur les tables sous-jacentes selon le mode de sécurité / definer).
-- insère dans les tables de BdInventaire → nécessite `INSERT` (et éventuellement `SELECT` si contrôles d’existence / déduplication).
+### Question A2.3
 
-Proposition minimale (à adapter aux tables exactes de BdInventaire) :
+#### a) Créer le compte `prep_sso`
 
 ```sql
--- lecture de la vue
+CREATE USER 'prep_sso'@'localhost' IDENTIFIED BY 'motDePasseSecurisé';
+```
+
+#### b) Attribuer les droits strictement nécessaires
+
+Le programme `InventaireHabil` doit :
+- **Lire** la vue `v_liste_comptes` (SELECT).
+- **Insérer** des données dans les tables de `BdInventaire` (INSERT).
+
+Il n'a pas besoin de modifier, supprimer, créer ou administrer quoi que ce soit.
+
+```sql
+-- Droit de lecture sur la vue
 GRANT SELECT ON BdInventaire.v_liste_comptes TO 'prep_sso'@'localhost';
 
--- écriture dans les tables d’inventaire (exemples)
-GRANT SELECT, INSERT, UPDATE ON BdInventaire.Compte TO 'prep_sso'@'localhost';
-GRANT SELECT, INSERT, UPDATE ON BdInventaire.Role TO 'prep_sso'@'localhost';
-GRANT SELECT, INSERT, DELETE ON BdInventaire.CompteRole TO 'prep_sso'@'localhost';
-GRANT SELECT, INSERT, UPDATE ON BdInventaire.Application TO 'prep_sso'@'localhost';
+-- Droits d'insertion dans les tables de BdInventaire
+GRANT INSERT ON BdInventaire.Application TO 'prep_sso'@'localhost';
+GRANT INSERT ON BdInventaire.Compte TO 'prep_sso'@'localhost';
+GRANT INSERT ON BdInventaire.Role TO 'prep_sso'@'localhost';
+GRANT INSERT ON BdInventaire.PossederRole TO 'prep_sso'@'localhost';
 ```
 
-> Principe : **moindre privilège**. Si l’application ne fait que `INSERT` sans mise à jour, retirer `UPDATE/DELETE`.
+> Principe du **moindre privilège** : on n'accorde que les droits strictement nécessaires aux opérations que le programme effectue réellement.
 
 ---
 
 ## DOSSIER B – Mise en place du service SSO pour le système de gestion administratif
 
-### B1 – Renforcer la sécurité des données personnelles et sensibles
+---
 
-#### B1.1 – Divulgation d’identifiants à un stagiaire
+### Question B1.1
 
-**a) Infractions commises par l’agent**
+#### a) Infractions commises par l'agent
 
-- Violation de la **charte informatique** : « ne jamais communiquer ses codes d’accès à un tiers ».
-- Mise en danger de la sécurité du SI (manquement à une obligation professionnelle de sécurité).
-- Potentiellement, participation à un accès frauduleux (au minimum : **facilitation** d’accès non autorisé).
+En s'appuyant sur la charte informatique (Document B1, section 2.1.2) :
 
-**b) Le stagiaire est-il en faute ?**
+L'agent a **violé la règle 1 de la section 2.1.2** : *« Garder strictement confidentiel(s) son (ses) code(s) d'accès et ne jamais les communiquer à un tiers »*. En divulguant ses identifiants à son stagiaire, il a commis une **faute disciplinaire** au regard de la charte informatique qu'il a signée.
 
-Oui si :
+Sur le plan pénal, cette action peut également constituer une **mise en danger du système d'information** si cela facilite un accès non autorisé aux données personnelles du Sdis (violation du RGPD, article 32).
 
-- le stagiaire utilise un compte qui n’est pas le sien (usurpation),
-- ou accède à des ressources sans autorisation explicite.
+#### b) Le stagiaire est-il en faute ?
 
-Même si l’identifiant/mot de passe a été donné, cela ne constitue pas une autorisation valable : l’accès doit être **personnel** et **attribué**.
+Oui. La charte informatique s'applique explicitement aux stagiaires (section 1.1 : *« les stagiaires exerçant leurs missions au sein de l'organisation »*). En utilisant les identifiants d'un autre utilisateur, le stagiaire a violé la **règle 2 de la section 2.1.2** : *« Ne pas utiliser les codes d'accès d'un autre utilisateur »*. Il est donc fautif, même si les identifiants lui ont été fournis volontairement.
 
-**c) Risques encourus**
+#### c) Risques encourus par les deux personnes
 
-- **Disciplinaires** : avertissement, suspension d’accès, sanctions selon règlement.
-- **Civils / pénaux** (selon faits, intention, préjudice) : accès frauduleux à un système, atteinte à l’intégrité/confidentialité de données, etc.
-- **Organisationnels** : compromission de données, traçabilité faussée (« qui a fait quoi »), fuite d’informations, non-conformité RGPD.
+- **L'agent** : sanctions disciplinaires (avertissement, suspension d'accès, voire licenciement selon la gravité), et potentiellement des poursuites civiles ou pénales si la divulgation a entraîné une violation de données personnelles.
+- **Le stagiaire** : sanctions disciplinaires (rupture du stage), et potentiellement des poursuites pénales pour accès frauduleux à un système de traitement automatisé de données (article 323-1 du Code pénal), même si l'accès a été facilité par l'agent.
 
-#### B1.2 – Condition pour que la charte s’impose aux employés
+---
 
-Pour être opposable aux salariés, la charte doit être :
+### Question B1.2 – Condition réglementaire pour que la charte s'impose aux employés
 
-- **portée à la connaissance** des personnels (diffusion, remise, signature/accusé de réception),
-- et, lorsqu’elle a valeur de règlement intérieur/annexe : **respecter les règles de dépôt/consultation** applicables (CSE, inspection du travail, affichage, etc.).
+Pour avoir une portée juridique contraignante, la charte informatique doit avoir été :
+1. **Portée à la connaissance des employés** (remise lors de l'embauche ou affichage accessible).
+2. **Intégrée au règlement intérieur** de l'établissement ou annexée à celui-ci (dans les organisations de plus de 50 salariés, le règlement intérieur doit être soumis à consultation des représentants du personnel et déposé auprès de l'inspection du travail).
+3. **Signée par chaque utilisateur**, attestant qu'ils en ont pris connaissance et en acceptent les termes.
 
-Idée clé attendue : **elle doit être intégrée/annexée au règlement intérieur ou soumise au même régime et notifiée** ; sinon, elle est difficilement opposable.
+Sans ces conditions, la charte ne peut pas fonder des sanctions disciplinaires.
 
-#### B1.3 – Données sensibles dans la base `Medical`
+---
 
-D’après le doc B3 :
+### Question B1.3 – Données sensibles de la base de données Medical
 
-- `num_secu` (NIR) → donnée personnelle à haut risque.
-- Données d’identité : `nom`, `prenom`, `date_naissance`, `pays_naissance`.
-- Coordonnées : `tel_priv`, `tel_prof`, `mail_prof`, `rue`, `complement_rue`, `code_postal`, `ville`.
-- Données liées à la santé / suivi médical (sensibles au sens RGPD) :
-  - dans `Visite` : `taille`, `poids`, `masse_graisseuse`, `masse_musculaire`, `tension`, `profil`.
-  - dans `Vaccination` (et liaison avec `Vaccin.nom`) : information de vaccination.
+Selon le RGPD (article 9), les **données sensibles** sont des catégories particulières de données, notamment les données relatives à la **santé**, à l'**origine ethnique** et à certaines caractéristiques biologiques.
 
-> Le doc précise : **Rhésus non considéré sensible** dans ce contexte (inscrit en clair sur uniforme dans certains corps). On l’exclut donc des « sensibles » attendues.
+En analysant le Document B3 :
 
-#### B1.4 – Scénario de risque rendant pertinent le chiffrement (accès applicatif sécurisé)
+**Données sensibles dans la table `Patient` :**
+- `num_secu` (numéro de sécurité sociale) → donnée personnelle à caractère hautement sensible, liée à l'identité et à la santé.
+- `genre_biologique` → donnée sensible (caractéristique physiologique).
+- `pays_naissance` → peut révéler une origine ethnique/nationale (donnée sensible).
 
-Même si l’application chiffre les échanges et authentifie correctement :
+**Données sensibles dans la table `PatientAnonyme` :**
+- `rhesus` → le sujet précise que le rhésus **n'est pas considéré comme une donnée sensible** dans ce contexte (car inscrit sur l'uniforme). Il n'est donc **pas** à retenir.
 
-- un attaquant obtient un **accès au serveur SQL** (compte admin compromis, vulnérabilité OS, vol de sauvegardes, snapshot VM, accès d’un prestataire) ;
-- ou exfiltre des fichiers `.mdf/.ldf` / sauvegardes.
+**Données sensibles dans la table `Visite` :**
+- `taille`, `poids`, `masse_graisseuse`, `masse_musculaire`, `tension` → données de **santé** (données médicales relatives à l'état physique).
+- `profil` → évaluation médicale individuelle (profil SIGYC0P) → donnée de **santé**.
 
-Sans chiffrement colonne : les données sont lisibles **hors application**. 
-Le chiffrement en base réduit l’impact d’une compromission du stockage/backup (confidentialité) et limite l’exposition en cas d’accès « lecture seule » non autorisé.
+**Données sensibles dans la table `Vaccination` :**
+- L'association `id_anonyme` + `id_vaccin` constitue une donnée de **santé** (informations sur les vaccinations effectuées).
 
-#### B1.5 – Tester le point 4 (chiffrement) sur `PatientAnonyme.rhesus`
+---
 
-Point 4 du scénario : ajouter colonne chiffrée, remplir, supprimer clair, renommer.
+### Question B1.4 – Scénario de risque justifiant le chiffrement
 
-Exemple T‑SQL (en supposant qu’on chiffre `rhesus` malgré la remarque, pour l’exercice) :
+**Scénario :** Un administrateur de base de données (DBA) ou un prestataire de maintenance externe, disposant d'un accès légitime au serveur SQL Server pour des raisons techniques, exploite cet accès pour **consulter directement les tables de la base Medical** sans passer par l'application.
+
+Bien que les accès applicatifs soient sécurisés, un DBA peut interroger les tables directement via SQL Server Management Studio. Sans chiffrement des colonnes, il peut lire en clair le numéro de sécurité sociale, les données médicales (profil, tension, masse corporelle) et les données d'identification des sapeurs-pompiers.
+
+Ces données pourraient être revendues, divulguées à des tiers (compagnies d'assurance, employeurs concurrents) ou utilisées pour nuire aux personnes concernées.
+
+**Ce scénario justifie le chiffrement des colonnes sensibles** : même avec un accès direct à la base, un utilisateur non habilité ne verrait que des données chiffrées illisibles.
+
+---
+
+### Question B1.5 – Requêtes pour tester le point 4 du scénario (table `PatientAnonyme`, champ `rhesus`)
+
+En s'appuyant sur le Document B4 (étapes 4a à 4d) et le Document B2 (syntaxe T-SQL) :
 
 ```sql
--- 4a) ajouter colonne varbinary
-ALTER TABLE PatientAnonyme
-ADD rhesus_tmp VARBINARY(30);
-GO
+-- Étape 4a : Ajouter une nouvelle colonne chiffrée
+ALTER TABLE PatientAnonyme ADD rhesus_chiffre varbinary(30);
 
--- ouverture de la clé pour pouvoir chiffrer
-OPEN SYMMETRIC KEY Medical_Key
-DECRYPTION BY CERTIFICATE Medical18;
-GO
+-- Étape 4b : Renseigner la colonne chiffrée avec la donnée chiffrée
+-- (nécessite d'ouvrir la clé symétrique d'abord)
+OPEN SYMMETRIC KEY Medical_Key DECRYPTION BY CERTIFICATE Medical18;
 
--- 4b) renseigner avec la donnée chiffrée
 UPDATE PatientAnonyme
-SET rhesus_tmp = EncryptByKey(Key_GUID('Medical_Key'), CONVERT(NVARCHAR(30), rhesus));
-GO
+SET rhesus_chiffre = EncryptByKey(Key_GUID('Medical_Key'), rhesus);
 
 CLOSE SYMMETRIC KEY Medical_Key;
-GO
 
--- 4c) supprimer la colonne en clair
-ALTER TABLE PatientAnonyme
-DROP COLUMN rhesus;
-GO
+-- Étape 4c : Supprimer la colonne en clair
+ALTER TABLE PatientAnonyme DROP COLUMN rhesus;
 
--- 4d) renommer la colonne chiffrée
-EXEC sp_rename 'PatientAnonyme.rhesus_tmp', 'rhesus', 'COLUMN';
-GO
-
--- Test lecture brute : on voit du varbinary (donc du chiffré)
-SELECT TOP(10) id_anonyme, rhesus FROM PatientAnonyme;
+-- Étape 4d : Renommer la nouvelle colonne avec le nom d'origine
+EXEC sp_rename 'PatientAnonyme.rhesus_chiffre', 'rhesus', 'COLUMN';
 ```
 
 ---
 
-### B2 – Audit de sécurité et intégration
+### Question B2.1 – Conséquences sécuritaires de l'absence d'authentification sur les routes de l'API
 
-#### B2.1 – Conséquences si aucune route API n’est soumise à authentification
+Élodie signale qu'**aucune route de l'API n'est soumise à authentification** : seul le code applicatif qui appelle l'API vérifie l'identité de l'utilisateur.
 
-Si l’API ne contrôle pas elle-même l’authentification/autorisation :
+Cela implique les risques suivants :
+- **Contournement de l'authentification** : n'importe quelle application ou personne connaissant l'URL de l'API peut appeler directement les routes (ex. via Postman, curl) sans être authentifiée, contournant totalement le contrôle d'accès de l'application cliente.
+- **Accès non autorisé aux données** : un attaquant peut lire (`GET /formations`), créer, modifier ou supprimer des formations sans aucun contrôle d'identité côté serveur.
+- **Attaque de type IDOR** (Insecure Direct Object Reference) : en appelant `DELETE /formations/{code}`, n'importe qui peut supprimer n'importe quelle formation.
+- **Non-respect du principe de défense en profondeur** : la sécurité ne repose que sur une seule couche (le client), ce qui est insuffisant.
 
-- Toute personne sur le réseau pouvant appeler l’API peut invoquer **GET/POST/PUT/DELETE** directement (ex : Postman), donc **contourner** l’IHM.
-- Risque d’atteinte :
-  - **confidentialité** (lecture formations),
-  - **intégrité** (création / modification / suppression),
-  - **traçabilité** (actions non attribuables à un utilisateur authentifié),
-  - **élévation de privilèges**.
+---
 
-En bref : la sécurité « côté client » est insuffisante : **le serveur (API) doit être le point de contrôle**.
+### Question B2.2 – Résolution du problème de mise à jour de formation (erreur 405)
 
-#### B2.2 – Problème de modification du « public concerné » (hypothèse la plus probable)
+**Problème identifié :**
 
-Sans les captures, l’hypothèse la plus fréquente sur un `PUT /formations/{code}` est :
+L'erreur retournée est `405 Method Not Allowed` sur la route `/formations/F204591` avec la méthode **POST**. Or, d'après le Document B5, la mise à jour d'une formation est gérée par la méthode **`@PutMapping`** (`PUT`), pas `@PostMapping` (`POST`).
 
-- **incohérence entre le `{code}` dans l’URL et le `code` dans le corps JSON** (ou absence du champ),
-- ou **mauvais mapping** JSON↔objet Java (champ différent, casse, nom attribut).
+Élodie utilise `POST` dans Postman alors qu'elle devrait utiliser **`PUT`**.
 
-Solution à proposer à Élodie (méthode) :
+**Explication à fournir à Élodie :**
 
-1. Vérifier que la requête Postman envoie :
-   - `PUT /formations/F204591`
-   - un body JSON valide contenant *le champ attendu* (ex : `publicConcerne` ou `public`), et encodé en `application/json`.
-2. Côté API : dans `mettreAJourFormation`, vérifier qu’on utilise bien :
-   - le `code` du path comme identifiant de la ressource,
-   - et qu’on **ne dépend pas d’un code présent dans le JSON** (ou qu’on vérifie leur égalité).
+Dans l'API REST développée avec Spring, les opérations CRUD sont mappées sur des méthodes HTTP distinctes :
+- `POST /formations` → **créer** une nouvelle formation.
+- `PUT /formations/{code}` → **mettre à jour** une formation existante.
 
-Exemple de contrôle (idée) :
+Élodie envoie une requête `POST` vers `/formations/F204591`, ce qui ne correspond à aucune route définie (il n'existe pas de `@PostMapping("/formations/{code}")`). Le serveur retourne donc `405 Method Not Allowed`.
 
-```java
-if (!code.equals(formation.getCode())) {
-  throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code URL différent du code JSON");
-}
-```
+**Solution :** dans Postman, changer la méthode de `POST` à **`PUT`** en conservant la même URL `/formations/F204591` et le même corps JSON.
 
-#### B2.3 – Hypothèse la plus probable sur `invalid_token` après 15 minutes
+---
 
-Le champ `expires_in` du JWT vaut **300 secondes = 5 minutes** (doc B6).
-Après 15 minutes, l’**access token est expiré** → l’API rejette le jeton : `Token verification failed`.
+### Question B2.3 – Hypothèse sur l'erreur « Token verification failed »
 
-Donc : il faut soit redemander un token, soit utiliser le **refresh token** pour en obtenir un nouveau.
+**Hypothèse la plus probable : le jeton JWT a expiré.**
 
-#### B2.4 – Compléter la méthode `getToken()` (rafraîchissement)
+D'après le Document B6, l'`access_token` a une durée de validité de **300 secondes** (5 minutes). Élodie a obtenu son jeton puis a effectué une pause de **15 minutes** avant de l'utiliser. Le jeton est donc expiré depuis 10 minutes au moment de la requête.
 
-Spécifications :
+Le serveur SSO rejette le jeton car sa date d'expiration (champ `exp` encodé dans le JWT) est dépassée, ce qui génère l'erreur `invalid_token / Token verification failed`.
 
-- utiliser `requestToken(params)`
-- params = `refresh_token`, `client_id`, `grant_type`
-- grant_type = `refresh-token` (tel qu’écrit dans l’énoncé ; en OIDC standard c’est souvent `refresh_token`)
+**Solution :** utiliser le `refresh_token` (valide 1 800 secondes / 30 minutes) pour obtenir un nouvel `access_token` sans avoir à se réauthentifier, via la méthode `getToken()` sans paramètre à compléter.
 
-Implémentation :
+---
+
+### Question B2.4 – Complétion de la méthode `getToken()` sans paramètre
+
+En s'appuyant sur le Document B8 (méthode `getToken(User leUser)` comme modèle) et les spécifications dans la Javadoc :
 
 ```java
 public String getToken() {
-  List<NameValuePair> params = new ArrayList<NameValuePair>();
-  params.add(new BasicNameValuePair("refresh_token", this.refreshToken));
-  params.add(new BasicNameValuePair("client_id", "gsic_api_rolebased"));
-  params.add(new BasicNameValuePair("grant_type", "refresh-token"));
-  this.requestToken(params);
-  return this.token;
+    List<NameValuePair> params = new ArrayList<NameValuePair>();
+    params.add(new BasicNameValuePair("refresh_token", this.refreshToken));
+    params.add(new BasicNameValuePair("client_id", "gsic_api_rolebased"));
+    params.add(new BasicNameValuePair("grant_type", "refresh_token"));
+    this.requestToken(params);
+    return this.token;
 }
 ```
 
----
-
-### B3 – Impact du SSO sur les risques établis
-
-#### B3.1
-
-**a) Pourquoi le SSO modifie le scénario ?**
-
-Avec SSO, un seul mot de passe (ou un seul jeton/identité) peut donner accès à **plusieurs applications**. 
-Donc, si le mot de passe est volé :
-
-- l’attaque ne touche plus seulement Sdisform, mais potentiellement **tout le SI** fédéré (effet de **concentration du risque**).
-- l’impact (gravité) augmente : accès à des données plus nombreuses, fonctions plus critiques.
-
-**b) Piste d’amélioration pour réduire le risque**
-
-- Mettre en place une **MFA** (authentification multifacteur) sur le SSO.
-- Renforcer la détection : supervision, alertes, analyse d’anomalies.
-- Appliquer le **moindre privilège** (rôles/claims limités) et une gestion fine des habilitations.
-- Limiter la durée des tokens, mettre en place rotation/ révocation.
+> Le paramètre `grant_type` vaut `"refresh_token"` (et non `"password"` comme pour l'authentification initiale). Le `refresh_token` actuel est passé pour obtenir un nouvel `access_token`.
 
 ---
 
-## DOSSIER C – Adaptation de la politique de sécurité de l’application mobile Rescousse
+### Question B3.1 – Impact du SSO sur le scénario de risque
 
-### C1 – Renforcement de la sécurité d’accès
+#### a) Comment le SSO modifie ce scénario
 
-#### C1.1 – Attaque mieux contrée par un mot de passe 8 caractères qu’un PIN 4 chiffres
+Avant le SSO, si un pirate vole le mot de passe d'un sapeur-pompier pour l'application d'inscription aux formations, il n'accède qu'à **cette seule application**. Les conséquences sont limitées.
 
-Un mot de passe 8 caractères (selon politique : lettres/majuscules/chiffres/symboles) augmente l’espace de recherche.
+Après la mise en place du SSO, **un seul couple identifiant/mot de passe donne accès à toutes les applications** du système de gestion administratif. Le vol de ce mot de passe unique permettrait au pirate d'accéder à l'ensemble des applications (RH, formations, logistique, prévention, médical…), y compris des données personnelles et médicales sensibles.
 
-Il protège mieux contre :
+**Conséquence : la gravité du scénario augmente considérablement.** Le risque, initialement noté gravité 2 / vraisemblance 2, devrait être réévalué à une gravité bien plus élevée (3 ou 4), puisque l'impact potentiel n'est plus limité à une seule application mais s'étend à tout le SI.
 
-- l’**attaque par force brute** / essai exhaustif (en local ou en ligne),
-- et le **devinage** (PIN trop court, souvent basé sur des motifs courants : 0000, 1234, date).
+#### b) Piste d'amélioration pour minimiser le risque
 
-#### C1.2 – Différence juridique : reconnaissance faciale vs mot de passe
+La piste d'amélioration la plus adaptée est la mise en place de l'**authentification multi-facteurs (MFA)** sur le service SSO. Même si un attaquant vole le mot de passe, il ne pourra pas se connecter sans le second facteur (application OTP, SMS, clé physique FIDO2…).
 
-- Mot de passe = **connaissance** (quelque chose que l’on sait), modifiable, révocable.
-- Reconnaissance faciale = **biométrie** (quelque chose que l’on est) :
-  - donnée **particulière** / sensible (au sens RGPD : données biométriques utilisées pour identifier une personne de manière unique),
-  - traitement soumis à **conditions renforcées** (finalité, minimisation, sécurité, base légale, information, etc.).
+Cela réduit fortement la **vraisemblance** du scénario (un mot de passe seul ne suffit plus), compensant ainsi l'augmentation de la gravité due au SSO.
 
-De plus, en cas de compromission : un visage n’est pas « réinitialisable » comme un mot de passe.
+---
 
-#### C1.3 – Code de `ajouterEntreeLog` (SQLite)
+## DOSSIER C – Adaptation de la politique de sécurité de l'application mobile Rescousse
 
-On insère dans la table `Log(date, heure, type, resultat, message)`.
+---
 
-Implémentation (en restant simple, avec `execSQL`) :
+### Question C1.1 – Type d'attaque contre lequel un mot de passe à 8 caractères est plus protecteur
+
+Un mot de passe à 8 caractères (avec majuscules, minuscules, chiffres et caractères spéciaux, soit un espace de ~72 caractères) est beaucoup plus protecteur qu'un code PIN à 4 chiffres contre une **attaque par force brute**.
+
+- Un code PIN à 4 chiffres offre `10^4 = 10 000` combinaisons possibles.
+- Un mot de passe à 8 caractères (alphabet étendu ~72 caractères) offre `72^8 ≈ 7,2 × 10^14` combinaisons, soit environ **70 milliards de fois plus** de combinaisons à tester.
+
+Le temps nécessaire pour parcourir exhaustivement toutes les combinaisons est donc incomparablement plus long, rendant la force brute pratiquement impossible dans un délai raisonnable.
+
+---
+
+### Question C1.2 – Distinction juridique entre reconnaissance faciale et mot de passe
+
+Un mot de passe est une **donnée de connaissance** : il peut être changé, réinitialisé, partagé ou oublié. Il ne bénéficie pas d'une protection juridique spécifique en tant que donnée personnelle (c'est un secret, pas une caractéristique de la personne).
+
+La **reconnaissance faciale** repose sur des **données biométriques** (gabarit du visage), qui sont des données **sensibles au sens du RGPD** (article 9) : elles permettent d'identifier une personne de manière unique et permanente, et ne peuvent pas être modifiées en cas de compromission.
+
+Juridiquement :
+- Le traitement de données biométriques est **interdit par défaut** et ne peut être mis en œuvre que dans des cas exceptionnels prévus par le RGPD (consentement explicite, nécessité pour la sécurité des personnes, etc.).
+- En contexte professionnel (lieu de travail), la CNIL encadre strictement l'usage de la biométrie et exige notamment une **analyse d'impact (AIPD)** préalable.
+- Les données biométriques ne peuvent pas être « changées » en cas de fuite, contrairement à un mot de passe.
+
+---
+
+### Question C1.3 – Code de la méthode `ajouterEntreeLog`
+
+En s'appuyant sur le Document C2 (structure de `EntreeLog` et `DbLogRescousse`), le Document C3 (syntaxe SQLite INSERT) et le modèle de `supprimerEntreesLog` :
 
 ```java
 public void ajouterEntreeLog(EntreeLog uneEntreeLog) {
-  try {
-    SQLiteDatabase db = this.getWritableDatabase();
+    try {
+        // Ouvre la base de données en écriture
+        SQLiteDatabase db = this.getWritableDatabase();
 
-    String sql = "INSERT INTO " + TABLE_NAME
-        + " (date, heure, type, resultat, message) VALUES (?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO " + TABLE_NAME
+            + " (date, heure, type, resultat, message) VALUES (?, ?, ?, ?, ?);";
 
-    db.execSQL(
-        sql,
-        new Object[]{
+        db.execSQL(sql, new Object[]{
             uneEntreeLog.getDate().toString(),
             uneEntreeLog.getHeure().toString(),
             uneEntreeLog.getType(),
             uneEntreeLog.getResultat(),
             uneEntreeLog.getMessage()
-        }
-    );
-  } catch (Exception ex) {
-    traiterErreur("insertion log", ex);
-  }
+        });
+    } catch (Exception ex) {
+        traiterErreur("ajout entrée log", ex);
+    }
 }
 ```
 
-> Alternative « Android standard » : utiliser `ContentValues` + `db.insert(...)`.
+> `id` n'est pas passé car c'est une clé primaire en `AUTOINCREMENT`. Les types `LocalDate` et `LocalTime` sont convertis en `String` (`.toString()`) car SQLite utilise le type `TEXT` pour les dates/heures.
 
-#### C1.4 – Compléter `onCreate` de `LoginBiometrieActivity`
+---
 
-On doit enregistrer un log :
+### Question C1.4 – Complétion de la méthode `onCreate` de `LoginBiometrieActivity`
 
-- type = `LoginBiometrie`
-- succès : resultat=`Succes`, message=`OK`
-- erreur : resultat=`Echec`, message=`errorCode + " - " + errString`
+En s'appuyant sur le Document C5 et le tableau des valeurs à renseigner :
 
-Ajouts attendus dans les callbacks :
+| Authentification | Résultat | Message |
+|---|---|---|
+| Succès | `"Succes"` | `"OK"` |
+| Erreur | `"Echec"` | code erreur – texte erreur |
 
 ```java
+// Dans onAuthenticationError :
 @Override
 public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
-  super.onAuthenticationError(errorCode, errString);
+    super.onAuthenticationError(errorCode, errString);
 
-  // log
-  EntreeLog e = new EntreeLog(
-      "LoginBiometrie",
-      "Echec",
-      errorCode + " - " + errString
-  );
-  dbLog.ajouterEntreeLog(e);
+    // Création et enregistrement de l'entrée log en cas d'erreur
+    EntreeLog entreeLog = new EntreeLog(
+        "LoginBiometrie",
+        "Echec",
+        errorCode + " - " + errString.toString()
+    );
+    dbLog.ajouterEntreeLog(entreeLog);
 
-  // affichage
-  snack(errorCode + " - " + errString);
+    // Affichage du message d'erreur à l'utilisateur
+    snack(errString.toString());
 }
 
+// Dans onAuthenticationSucceeded :
 @Override
 public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
-  super.onAuthenticationSucceeded(result);
+    super.onAuthenticationSucceeded(result);
 
-  // log
-  EntreeLog e = new EntreeLog(
-      "LoginBiometrie",
-      "Succes",
-      "OK"
-  );
-  dbLog.ajouterEntreeLog(e);
+    // Création et enregistrement de l'entrée log en cas de succès
+    EntreeLog entreeLog = new EntreeLog(
+        "LoginBiometrie",
+        "Succes",
+        "OK"
+    );
+    dbLog.ajouterEntreeLog(entreeLog);
 
-  startActivity(rescousseActivite);
+    // Démarrer l'activité suivante
+    startActivity(rescousseActivite);
 }
 ```
 
-#### C1.5 – Contenu indispensable des logs (CNIL) et durée
+---
 
-**a) La table `LogRescousse` est-elle complète ?**
+### Question C1.5 – Analyse de la table `LogRescousse` au regard des recommandations CNIL
 
-Recommandations CNIL (doc C4) : journaliser au minimum :
+#### a) La table contient-elle toutes les données indispensables ?
 
-- **auteur** individuellement identifié,
-- **horodatage**,
-- **équipement** utilisé,
-- **nature de l’opération**.
+D'après le Document C4, la CNIL recommande que chaque entrée de journal contienne :
+- **L'auteur individuellement identifié** ✗ → la table `LogRescousse` ne contient pas d'identifiant de l'utilisateur (pompier) qui a tenté de se connecter. On sait seulement de quelle tablette provient la tentative (via `adMAC`), mais pas qui l'a effectuée.
+- **L'horodatage** ✓ → `date` et `heure` sont présents.
+- **L'équipement utilisé** ✓ → `adMAC` (adresse MAC de la tablette) identifie l'équipement.
+- **La nature de l'opération** ✓ → `type` (LoginBiometrie ou LoginMdp) et `resultat` permettent de qualifier l'opération.
 
-Table proposée :
+**Conclusion :** La table est **incomplète** : il manque un identifiant permettant d'identifier individuellement l'utilisateur (ex. : numéro de matricule du pompier), conformément aux recommandations de la CNIL.
 
-- `adMAC` → équipement (OK),
-- `date`, `heure` → horodatage (OK),
-- `type` → nature (partielle : type d’authent),
-- `resultat`, `message` → détails (OK),
-- **manque un auteur identifié** (ex : `idUtilisateur` ou identifiant opérationnel). 
+#### b) Durée de conservation recommandée par la CNIL
 
-Donc : **non**, il manque l’auteur (ex : `idUtilisateur` ou identifiant opérationnel). 
+La CNIL recommande une durée de conservation des données de journalisation de **6 mois**.
 
-**b) Durée de conservation recommandée**
+---
 
-Pour les journaux de sécurité/authentification, la CNIL recommande généralement une conservation **limitée**, souvent **6 mois** (ordre de grandeur fréquemment attendu en BTS).
+### Question C1.6 – Requête SQL pour M. Dinant
 
-> À adapter selon finalité et politique interne ; l’important est « durée proportionnée et limitée ».
-
-#### C1.6 – Requête : nombre d’échecs par type et par message
+M. Dinant souhaite connaître le **nombre de tentatives en échec** pour chaque `type` de connexion et pour chaque `message` d'erreur :
 
 ```sql
-SELECT
-  type,
-  message,
-  COUNT(*) AS nbEchecs
+SELECT type, message, COUNT(*) AS nb_tentatives_echec
 FROM LogRescousse
 WHERE resultat = 'Echec'
 GROUP BY type, message
-ORDER BY type, nbEchecs DESC;
+ORDER BY type, nb_tentatives_echec DESC;
 ```
+
+> Le `GROUP BY type, message` permet d'obtenir le nombre d'échecs par combinaison type/message. Le `ORDER BY` est optionnel mais améliore la lisibilité.
+
+---
+
+*Correction réalisée sur la base du sujet BTS SIO SLAM – U6 Cybersécurité – Session 2024 (Code sujet : 24SI6SLAM-M1)*
