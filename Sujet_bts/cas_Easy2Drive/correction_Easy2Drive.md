@@ -124,13 +124,11 @@ function verifPassword($mdp): bool
     $points_total = $points_long + $points_comp;
     return ($points_total >= 10);
 }
-```
-
-**c) Modification / complétion des tests unitaires**
+c) Modification / complétion des tests unitaires
 
 Objectif : couvrir longueur, absence de catégories, et cas valide.
 
-```php
+PHP
 public function testVerifPassword()
 {
     // trop court
@@ -151,24 +149,19 @@ public function testVerifPassword()
     // cas valide : >=12 + min+maj+chiffre+spécial => total = 1 + (1+2+3+4)=11
     $this->assertSame(true, verifPassword("Qamqdvdbabc3!"));
 }
-```
+A.3.3 – Renouvellement MDP (base de données)
+a) Requête ALTER TABLE
 
-#### A.3.3 – Renouvellement MDP (base de données)
-
-**a) Requête ALTER TABLE**
-
-```sql
+SQL
 ALTER TABLE Utilisateur
 ADD dateMajMDP DATE NOT NULL DEFAULT (CURRENT_DATE());
-```
+(NB : selon la version/configuration MySQL, l’expression DEFAULT (CURRENT_DATE()) peut être refusée. Une alternative acceptable dans le cadre du sujet est de mettre une valeur par défaut fixe (ex : DEFAULT '2022-01-01') puis d’initialiser dateMajMDP à la création du compte et à chaque changement de mot de passe (application / procédure / trigger). L’idée attendue : champ obligatoire non nul, initialisé lors de la création.)
 
-(NB : selon la version MySQL, l’expression DEFAULT peut être restreinte ; une alternative est DEFAULT '2022-01-01' + mise à jour lors de la création, ou champ DATETIME avec trigger. L’idée attendue : champ non nul initialisé à la création.)
-
-**b) Fonction stockée renouvelleMDP(idEleve)**
+b) Fonction stockée renouvelleMDP(idEleve)
 
 Retourne vrai si le mot de passe n’a pas été changé depuis plus de 90 jours.
 
-```sql
+SQL
 CREATE FUNCTION renouvelleMDP(numEleve INT)
 RETURNS BOOLEAN
 BEGIN
@@ -185,45 +178,38 @@ BEGIN
 
     RETURN v_retour;
 END;
-```
+Dossier B – Conclusions audit de sécurité
+Mission B1 – Garantie Réussite
+B.1.1 – Conséquence principale pour Easy2Drive
+La conséquence majeure est financière et juridique :
 
----
-
-## Dossier B – Conclusions audit de sécurité
-
-### Mission B1 – Garantie Réussite
-
-#### B.1.1 – Conséquence principale pour Easy2Drive
-
-La conséquence majeure est **financière et juridique** :
-- Easy2Drive rembourse des frais à tort (perte financière) ;
-- risque de **fraude** massive, impact réputationnel, et litiges avec d’autres auto-écoles/clients.
-
-#### B.1.2
-
-**a) Conditions mal ou non implémentées**
+Easy2Drive rembourse des frais à tort (perte financière) ;
+risque de fraude massive, impact réputationnel, et litiges avec d’autres auto-écoles/clients.
+B.1.2
+a) Conditions mal ou non implémentées
 
 En comparant doc B1 et trigger B2 :
 
-1) **“L’échec date de moins de 6 mois”** : le trigger teste :
-```sql
+“L’échec date de moins de 6 mois” : le trigger teste :
+SQL
 IF DATE_ADD(NEW.dateEtg, INTERVAL 6 MONTH) >= NOW() THEN SIGNAL 'échec trop ancien'
-```
-C’est inversé : si dateEtg + 6 mois >= maintenant, alors l’échec est **récent**, donc on ne doit pas rejeter.
-La condition correcte pour “trop ancien” est :
-- si dateEtg + 6 mois < NOW() => trop ancien.
+C’est inversé : si dateEtg + 6 mois >= maintenant, alors l’échec est récent, donc on ne doit pas rejeter. La condition correcte pour “trop ancien” est :
 
-2) **“Avoir passé au moins 4 examens blancs”** : le trigger calcule une moyenne sur les 4 meilleures notes, mais ne vérifie pas qu’il existe **au moins 4 examens**.
+si dateEtg + 6 mois < NOW() => trop ancien.
+“Avoir passé au moins 4 examens blancs” : le trigger calcule une moyenne sur les 4 meilleures notes, mais ne vérifie pas qu’il existe au moins 4 examens.
 
-3) **“25 séries de quiz”** : le trigger compte Evaluer, ce qui semble cohérent, mais attention à la clé : doc BD indique Evaluer(idEleve, idSerieTest, dateHeure, evaluerScore). Le trigger utilise `NEW.id` alors que la table Eleve a une clé `idUtilisateur`. Selon l’implémentation réelle, il faut probablement `NEW.idUtilisateur` (ou `NEW.id` si la colonne s’appelle id). Dans le code fourni, la table Eleve a `idUtilisateur`.
+“25 séries de quiz” : le trigger compte des lignes dans Evaluer, ce qui correspond bien aux séries réalisées. En revanche, il utilise NEW.id :
 
-4) **“Garantie accordée une seule fois après le premier échec”** : le trigger vérifie `OLD.echecEtg = TRUE AND NEW.echecEtg = TRUE` (deuxième échec). Mais la règle dit : garantie accordée **une seule fois** après le premier échec ; il faudrait aussi empêcher une ré-attribution si `OLD.garantieReussite` est déjà vrai.
-
-**b) Corrections (parties à modifier/ajouter)**
+Or, d’après le schéma relationnel (doc commun 1), la table Eleve est identifiée par idUtilisateur et les tables Evaluer(idEleve, ...) et Passer(idEleve, ...) référencent l’identifiant de l’élève.
+Il faut donc vérifier la cohérence des clés et compter avec le bon identifiant (ex : NEW.idUtilisateur si c’est le nom de la colonne, sinon NEW.id si la table Eleve a bien une colonne id). => Risque : compter les séries/examens d’un mauvais élève, donc attribuer la garantie à tort.
+“Garantie accordée une seule fois après le premier échec” : le trigger gère seulement le cas OLD.echecEtg = TRUE AND NEW.echecEtg = TRUE (donc un deuxième échec déclaré).
+Mais la règle métier dit aussi que la garantie ne doit pas être attribuée deux fois, même si l’auto-école tente de réactiver le flag garantieReussite.
+=> Il faut donc empêcher toute ré-attribution si OLD.garantieReussite est déjà à TRUE (contrôle sur le champ garantieReussite).
+b) Corrections (parties à modifier/ajouter)
 
 Extraits (en adaptant le nom de clé élève si besoin) :
 
-```sql
+SQL
 -- empêcher une seconde attribution
 IF OLD.garantieReussite = TRUE AND NEW.garantieReussite = TRUE THEN
     SIGNAL SQLSTATE '10006'
@@ -255,148 +241,108 @@ FROM (
     ORDER BY examenScore DESC
     LIMIT 4
 ) AS MeilleureNotes;
-```
-
----
-
-### Mission B2 – Traçage RGPD
-
-#### B.2.1 – Schéma BD_RGPD_LOGS (proposition)
-
-Objectif : journaliser *qui* (utilisateur + rôle) fait *quoi* (action) sur *quelle donnée* (table + id enregistrement) et *quand*.
+Mission B2 – Traçage RGPD
+B.2.1 – Schéma BD_RGPD_LOGS (proposition)
+Objectif : journaliser qui (utilisateur + rôle) fait quoi (action) sur quelle donnée (table + id enregistrement) et quand.
 
 Proposition minimale :
 
-- **UtilisateurLog**(idUtilisateur, nom, prenom) *(ou uniquement idUtilisateur si on veut minimiser les données dupliquées)*
-- **Role**(idRole, libele) : Directeur/Formateur/Élève/Modérateur
-- **Action**(idAction, libele) : CONSULTATION, INSERTION, MODIFICATION, SUPPRESSION
-- **Evenement**(
-  idEvent PK,
-  dateHeure DATETIME,
-  idUtilisateur,
-  idRole,
-  idAction,
-  tableCible VARCHAR,
-  idEnregistrement INT,
-  idAutoEcole INT NULL,
-  details VARCHAR/TEXT NULL
-)
-
+UtilisateurLog(idUtilisateur, nom, prenom) (ou uniquement idUtilisateur si on veut minimiser les données dupliquées)
+Role(idRole, libele) : Directeur/Formateur/Élève/Modérateur
+Action(idAction, libele) : CONSULTATION, INSERTION, MODIFICATION, SUPPRESSION
+Evenement( idEvent PK, dateHeure DATETIME, idUtilisateur, idRole, idAction, tableCible VARCHAR, idEnregistrement INT, idAutoEcole INT NULL, details VARCHAR/TEXT NULL )
 Remarques :
-- `tableCible` + `idEnregistrement` permettent de répondre aux questions du DPO.
-- `idAutoEcole` aide aux recherches “pour une auto-école donnée”.
-- `details` peut contenir des métadonnées non sensibles (ex : champs modifiés) sans stocker la donnée personnelle elle-même.
 
-#### B.2.2 – Création utilisateur MySQL
+tableCible + idEnregistrement permettent de répondre aux questions du DPO.
+idAutoEcole aide aux recherches “pour une auto-école donnée”.
+details peut contenir des métadonnées non sensibles (ex : champs modifiés) sans stocker la donnée personnelle elle-même.
+B.2.2 – Création utilisateur MySQL
+Serveur Web : Easy2Drive.fr (hôte MySQL autorisé à se connecter).
 
-Serveur Web : `Easy2Drive.fr` (hôte MySQL autorisé à se connecter).  
-
-```sql
+SQL
 CREATE USER 'APPLI_RGPD_LOGS'@'Easy2Drive.fr' IDENTIFIED BY 'MotDePasseSolideAChanger';
-```
-
 (Le mot de passe doit être fort et stocké dans un coffre/variable d’environnement côté appli.)
 
-#### B.2.3 – Permission minimale (insert uniquement)
-
-```sql
+B.2.3 – Permission minimale (insert uniquement)
+SQL
 GRANT INSERT ON BD_RGPD_LOGS.* TO 'APPLI_RGPD_LOGS'@'Easy2Drive.fr';
-```
+B.2.4
+a) Durée de conservation conforme CNIL
 
-#### B.2.4
+Doc CNIL 3 : période glissante ≤ 6 mois (sauf obligation légale/risque important).
 
-**a) Durée de conservation conforme CNIL**
+=> Proposer : 6 mois.
 
-Doc CNIL 3 : période glissante **≤ 6 mois** (sauf obligation légale/risque important).
+b) Document RGPD où consigner la durée
 
-=> Proposer : **6 mois**.
+Dans le registre des activités de traitement (registre RGPD / registre des traitements) qui doit mentionner les durées de conservation.
 
-**b) Document RGPD où consigner la durée**
-
-Dans le **registre des activités de traitement** (registre RGPD / registre des traitements) qui doit mentionner les durées de conservation.
-
-**c) Solution technique de purge automatique (sans réalisation)**
+c) Solution technique de purge automatique (sans réalisation)
 
 Mettre en place :
-- un **événement planifié MySQL** (EVENT SCHEDULER) qui supprime quotidiennement les logs plus vieux que 6 mois ; ou
-- un **cron** côté serveur exécutant une procédure stockée de purge.
 
+un événement planifié MySQL (EVENT SCHEDULER) qui supprime quotidiennement les logs plus vieux que 6 mois ; ou
+un cron côté serveur exécutant une procédure stockée de purge.
 Exemple de principe :
-- `DELETE FROM Evenement WHERE dateHeure < DATE_SUB(NOW(), INTERVAL 6 MONTH);`
 
----
-
-## Dossier C – Contre-mesures gestion des avis
-
-### Mission C1 – Saisie d’un avis
-
-#### C1.1 – Méthode Eleve::getNbMaxAvisAtteint
-
+DELETE FROM Evenement WHERE dateHeure < DATE_SUB(NOW(), INTERVAL 6 MONTH);
+Dossier C – Contre-mesures gestion des avis
+Mission C1 – Saisie d’un avis
+C1.1 – Méthode Eleve::getNbMaxAvisAtteint
 On veut vrai si l’élève a déjà déposé 3 avis (tableau 0..3).
 
-```php
+PHP
 public function getNbMaxAvisAtteint(): bool
 {
     return count($this->lesAvis) >= 3;
 }
-```
-
-#### C1.2 – Contrôleur AvisEleveController::monAvis
-
+C1.2 – Contrôleur AvisEleveController::monAvis
 Le formulaire ne doit être accessible que si :
-- soit l’élève **n’a pas encore d’avis**,
-- soit son dernier avis a été **modéré et rejeté** (modere = true mais publie = false),
-- et il ne doit pas avoir atteint 3 avis refusés.
 
-Avec les seules méthodes visibles : `getNbMaxAvisAtteint()` et `getDernierAvis()->getModere()`.
+soit l’élève n’a pas encore d’avis,
+soit son dernier avis a été modéré et rejeté (modere = true mais publie = false),
+et il ne doit pas avoir atteint 3 avis refusés.
+Avec les seules méthodes visibles : getNbMaxAvisAtteint() et getDernierAvis()->getModere().
 
 Condition de blocage (exemple cohérent) :
-- si l’élève a déjà un avis **non modéré** (en attente) => pas accès
-- ou si nb max atteint => pas accès
 
-```php
+si l’élève a déjà un avis non modéré (en attente) => pas accès
+ou si nb max atteint => pas accès
+PHP
 if ( $user->getNbMaxAvisAtteint() || (count($user->getLesAvis()) > 0 && $user->getDernierAvis()->getModere() == false) ) {
     return $this->redirectToRoute('home');
 }
-```
+(Remarque : pour être totalement conforme au scénario, il faudrait aussi distinguer modéré et publié (rejet = modéré=true et publié=false) et compter le nombre d’avis refusés ; l’énoncé mentionne getNbAvisRefuse() dans le tableau modérateur, donc une implémentation complète s’appuierait idéalement sur cette information.)
 
-(Remarque : pour être totalement conforme au scénario, il faudrait aussi distinguer modéré/publie et compter les refus ; l’énoncé mentionne `getNbAvisRefuse()` ailleurs, donc l’implémentation complète s’appuierait idéalement dessus.)
-
-#### C1.3 – Injection SQL
-
+C1.3 – Injection SQL
 Injection fournie : elle ferme la chaîne et ajoute plusieurs tuples à l’INSERT.
 
-**a) Résultat dans la base après réussite**
+a) Résultat dans la base après réussite
 
-Au lieu d’insérer **un seul avis**, la requête injectée entraîne l’insertion de **plusieurs avis supplémentaires** (ici une série d’avis) dans la table `Avis`, avec `dateDepot=now()`, `publie=true`, `modere=true`, et `idEleve=5` (d’après l’injection).
+Au lieu d’insérer un seul avis, la requête injectée entraîne l’insertion de plusieurs avis supplémentaires (une liste de tuples) dans la table Avis, avec dateDepot = now(), et des champs forcés (publie=true, modere=true) ainsi qu’un idEleve imposé (ici 5 dans l’injection). On obtient donc plusieurs nouveaux enregistrements “validés” directement, sans passer par la modération normale.
 
-**b) Comment l’injection contourne les mesures précédentes**
+b) Comment l’injection contourne les mesures précédentes
 
-Les mesures prévoyaient de limiter l’élève à un avis en attente de modération et à 3 tentatives.
-Or l’injection permet :
-- de **multiplier** les insertions en une seule soumission ;
-- de forcer des champs (`publie`, `modere`) à `true`, contournant la modération ;
-- potentiellement d’usurper un autre élève (idEleve=5).
+Les mesures prévoyaient de limiter l’élève à un avis en attente de modération et à 3 tentatives. Or l’injection permet :
 
-**c) Solution de correction (sans réalisation)**
+de multiplier les insertions en une seule soumission ;
+de forcer des champs (publie, modere) à true, contournant la modération ;
+potentiellement d’usurper un autre élève (idEleve=5).
+c) Solution de correction (sans réalisation)
 
-Utiliser des **requêtes préparées** avec paramètres liés (PDO `prepare()` + `bindParam()`), et ne jamais concaténer l’entrée utilisateur dans SQL.
+Utiliser des requêtes préparées avec paramètres liés (PDO prepare() + bindParam()), et ne jamais concaténer l’entrée utilisateur dans SQL.
 
 Ex :
-- `INSERT INTO avis(contenu, dateDepot, publie, modere, idEleve) VALUES (:contenu, NOW(), :publie, :modere, :idEleve)`
 
+INSERT INTO avis(contenu, dateDepot, publie, modere, idEleve) VALUES (:contenu, NOW(), :publie, :modere, :idEleve)
 Et éventuellement :
-- validation/encodage côté serveur, journalisation des tentatives, et WAF/filtrage, mais la protection principale reste la requête paramétrée.
 
----
-
-### Mission C2 – Modération
-
-#### C2.1 – PdoEasy2Drive::getDoublonMail
-
+validation/encodage côté serveur, journalisation des tentatives, et WAF/filtrage, mais la protection principale reste la requête paramétrée.
+Mission C2 – Modération
+C2.1 – PdoEasy2Drive::getDoublonMail
 Objectif : vrai si l’email correspond à plusieurs élèves.
 
-```php
+PHP
 public function getDoublonMail($unEmail): bool
 {
     $req = "SELECT COUNT(*) AS nb FROM utilisateur WHERE email = :mail";
@@ -406,17 +352,14 @@ public function getDoublonMail($unEmail): bool
     $ligne = $res->fetch();
     return ($ligne['nb'] >= 2);
 }
-```
+(Remarque : si on veut limiter aux élèves : JOIN eleve ON eleve.idUtilisateur = utilisateur.id.)
 
-(Remarque : si on veut limiter aux élèves : `JOIN eleve ON eleve.idUtilisateur = utilisateur.id`.)
-
-#### C2.2 – AvisModerateurController::listeAvis
-
-On doit transmettre à la vue une variable `$doublonMail` (ou une info par élève) indiquant si l’adresse est en double.
+C2.2 – AvisModerateurController::listeAvis
+On doit transmettre à la vue une variable $doublonMail (ou une info par élève) indiquant si l’adresse est en double.
 
 Dans la boucle :
 
-```php
+PHP
 $doublonMail = $PdoEasy2Drive->getDoublonMail($unEleve->getEmail());
 
 $tabDernierAvisParEleve[] = [
@@ -426,6 +369,6 @@ $tabDernierAvisParEleve[] = [
     'pasDeNeph' => $pasDeNeph,
     'doublonMail' => $doublonMail
 ];
-```
+Et côté render, rien à changer si la vue exploite lesAvisAModerer.
 
-Et côté `render`, rien à changer si la vue exploite `lesAvisAModerer`.  
+Code
